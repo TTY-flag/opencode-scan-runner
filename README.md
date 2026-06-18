@@ -178,6 +178,10 @@ cat output/<job>/runtime/session.json
 http://127.0.0.1:<OPENCODE_HOST_PORT>
 ```
 
+OpenCode 实时会话界面示例：
+
+![OpenCode 实时会话界面](pics/ScreenShot_2026-06-18_161825_246.png)
+
 ## 重新运行
 
 ```bash
