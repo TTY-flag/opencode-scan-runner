@@ -1,0 +1,35 @@
+{
+  "id": "python",
+  "display_name": "Python",
+  "extensions": [".py", ".pyw"],
+  "build_files": ["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "Pipfile", "poetry.lock"],
+  "ignore_dirs": ["venv", ".venv", "__pycache__", ".tox", ".mypy_cache", "site-packages", "dist", "build"],
+  "entry_point_patterns": [
+    "if\\s+__name__\\s*==\\s*[\"']__main__[\"']",
+    "@app\\.(route|get|post|put|delete|patch)",
+    "FastAPI\\s*\\(",
+    "argparse\\.ArgumentParser",
+    "@click\\.command",
+    "typer\\.Typer\\s*\\("
+  ],
+  "frameworks": [
+    {
+      "name": "flask",
+      "markers": ["Flask(__name__)", "@app.route"]
+    },
+    {
+      "name": "django",
+      "markers": ["manage.py", "settings.py", "urls.py", "INSTALLED_APPS"]
+    },
+    {
+      "name": "fastapi",
+      "markers": ["FastAPI(", "@app.get", "@router.post"]
+    }
+  ],
+  "source_kinds": ["http_request", "file", "env", "cmdline", "stdin", "queue", "websocket"],
+  "sink_kinds": ["sql_execution", "command_execution", "code_execution", "deserialization", "ssrf", "path_operation", "template_render", "xml_parse"],
+  "sanitizer_kinds": ["parameterized_query", "shell_argv", "shlex_quote", "path_canonicalization", "type_validation", "safe_loader", "html_escape"],
+  "taint_skill": "python-taint-tracking",
+  "scanner": "python-dataflow-module-scanner",
+  "security_scanner": "python-security-module-scanner"
+}

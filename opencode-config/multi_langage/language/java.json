@@ -1,0 +1,35 @@
+{
+  "id": "java",
+  "display_name": "Java",
+  "extensions": [".java", ".jsp", ".jspx"],
+  "build_files": ["pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "gradlew", "WEB-INF/web.xml"],
+  "ignore_dirs": ["target", "build", ".gradle", ".mvn", "out", "generated-sources"],
+  "entry_point_patterns": [
+    "@RequestMapping",
+    "@GetMapping",
+    "@PostMapping",
+    "extends\\s+HttpServlet",
+    "do(Get|Post|Put|Delete)\\s*\\(",
+    "public\\s+static\\s+void\\s+main\\s*\\("
+  ],
+  "frameworks": [
+    {
+      "name": "spring",
+      "markers": ["@RestController", "@Controller", "@RequestMapping", "SpringApplication.run"]
+    },
+    {
+      "name": "servlet",
+      "markers": ["HttpServletRequest", "HttpServletResponse", "web.xml"]
+    },
+    {
+      "name": "jax-rs",
+      "markers": ["@Path", "@GET", "@POST", "javax.ws.rs"]
+    }
+  ],
+  "source_kinds": ["http_request", "path_param", "query_param", "header", "body", "cmdline", "env", "file", "jms_message"],
+  "sink_kinds": ["sql_execution", "command_execution", "deserialization", "xxe", "ssrf", "path_operation", "spel_expression", "jndi_lookup", "template_render"],
+  "sanitizer_kinds": ["prepared_statement", "criteria_api", "allowlist", "canonical_path_check", "xml_secure_processing", "object_input_filter", "html_escape"],
+  "taint_skill": "java-taint-tracking",
+  "scanner": "language-module-scanner",
+  "security_scanner": "language-security-module-scanner"
+}

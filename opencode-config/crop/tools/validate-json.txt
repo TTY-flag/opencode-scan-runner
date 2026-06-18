@@ -1,0 +1,12 @@
+Validate a JSON file for correct syntax.
+
+Use this tool after writing any JSON file to verify it is valid. This is mandatory for all JSON outputs in the scanning pipeline (project_model.json, call_graph.json, candidates_*.json, verified.json, scan_log.json).
+
+Parameters:
+- path: Absolute path to the JSON file to validate
+
+Returns:
+- PASS: The file contains valid JSON. Includes file size and top-level keys.
+- FAIL: The file contains invalid JSON. Includes the parse error message, the error position (line and column), and a snippet of the file content around the error location (3 lines before and after) so you can identify and fix the problem.
+
+If validation fails, read the error details, fix the JSON content, rewrite the file, and call this tool again. Retry at most 2 times.

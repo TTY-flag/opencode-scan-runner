@@ -1,0 +1,23 @@
+services:
+  opencode-scan:
+    build:
+      context: .
+    image: opencode-scan-runner:latest
+    environment:
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:?DASHSCOPE_API_KEY is required}
+      OPENCODE_MODEL: ${OPENCODE_MODEL:?OPENCODE_MODEL is required}
+      OPENCODE_HOST_PORT: ${OPENCODE_HOST_PORT:-4096}
+    ports:
+      - "127.0.0.1:${OPENCODE_HOST_PORT:-4096}:4096"
+    volumes:
+      - type: bind
+        source: ${SCAN_PROJECT_DIR:?SCAN_PROJECT_DIR is required}
+        target: /scan/project
+        read_only: true
+      - type: bind
+        source: ${HARNESS_CONFIG_DIR:?HARNESS_CONFIG_DIR is required}
+        target: /scan/opencode
+        read_only: true
+      - type: bind
+        source: ${SCAN_OUTPUT_DIR:?SCAN_OUTPUT_DIR is required}
+        target: /scan/output

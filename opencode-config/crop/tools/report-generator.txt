@@ -1,0 +1,25 @@
+Generate two complete Markdown vulnerability reports from the SQLite database:
+1. *_confirmed.md — only CONFIRMED vulnerabilities
+2. *_unconfirmed.md — LIKELY / POSSIBLE vulnerabilities
+
+Each report programmatically includes ALL matching vulnerabilities with zero data loss.
+
+Report content (per file):
+1. Scan summary - severity distribution table, verification status table (computed via SQL GROUP BY)
+2. Top 10 critical vulnerabilities - sorted by severity then confidence
+3. Attack surface analysis - from project_model.json entry_points
+4. Complete vulnerability details - grouped by verified_severity (Critical > High > Medium > Low), each with ID, type, CWE, location, description, confidence, data flow, code snippet
+5. Module distribution - cross-tabulation of modules x severity
+6. CWE distribution - count by CWE ID
+
+After generation, the Reporter LLM should:
+- Add an executive summary paragraph at the top of the confirmed report
+- Enrich Top 5 vulnerabilities with deeper analysis (reading source code for context)
+- Add a remediation recommendations section
+
+Parameters:
+- db_path: Absolute path to the SQLite database file (scan.db)
+- project_model_path: Absolute path to project_model.json
+- output_path: Base path for reports (e.g. {SCAN_OUTPUT}/report.md generates report_confirmed.md and report_unconfirmed.md)
+- min_confidence: Minimum confidence threshold (default: 40)
+- code_root: PROJECT_ROOT path, used to label relative file paths in the report

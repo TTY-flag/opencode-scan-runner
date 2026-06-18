@@ -1,0 +1,16 @@
+Merge multiple JSON files by concatenating arrays under a specified key.
+
+Use this tool when you need to combine results from multiple module scan files into a single output file. Typical use cases:
+
+1. Merging dataflow scanner module results: candidates_df_*.json → candidates_df.json
+2. Merging security auditor module results: candidates_sec_*.json → candidates_sec.json
+
+The tool reads all JSON files matching the pattern in the given directory, extracts the array at the specified key from each file, concatenates them, and writes the merged result to the output file.
+
+Parameters:
+- directory: The directory containing JSON files to merge
+- pattern: Glob pattern for filenames (e.g. "candidates_df_*.json")
+- output: Full path for the merged output file
+- key: The JSON array field to merge (default: "vulnerabilities")
+
+Returns a summary with file count and item count. Does NOT return the merged content itself.

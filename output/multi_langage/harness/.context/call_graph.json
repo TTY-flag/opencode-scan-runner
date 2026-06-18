@@ -1,0 +1,742 @@
+{
+  "schema_version": "1.0",
+  "scope": {
+    "mode": "risk_focused",
+    "covered_modules": ["mod-http", "mod-main", "mod-auth", "mod-file", "mod-diag", "mod-audit"],
+    "covered_entry_points": [
+      "ep-cpp-main-health-001",
+      "ep-cpp-main-login-002",
+      "ep-cpp-main-files-003",
+      "ep-cpp-main-debug-ping-004",
+      "ep-cpp-main-admin-export-005"
+    ],
+    "truncated": false,
+    "notes": "Small project (401 lines, 10 files). All risk-relevant functions included. Covers all entry points, dangerous sinks (popen, ifstream, sprintf), and cross-module boundaries."
+  },
+  "nodes": [
+    {
+      "id": "fn-cpp-main-main",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "main",
+      "signature": "int main(int argc, char** argv)",
+      "file": "src/main.cpp",
+      "line": 27,
+      "module_id": "mod-main",
+      "receives_external_input": false,
+      "risk": "High",
+      "framework_role": "application_entry",
+      "evidence": ["src/main.cpp:27 int main(int argc, char** argv)"]
+    },
+    {
+      "id": "fn-cpp-main-queryvalue",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "queryValue",
+      "signature": "std::string queryValue(const HttpRequest& request, const std::string& key)",
+      "file": "src/main.cpp",
+      "line": 13,
+      "module_id": "mod-main",
+      "receives_external_input": true,
+      "risk": "High",
+      "framework_role": "parameter_extractor",
+      "evidence": ["src/main.cpp:13 extracts query parameter values from HTTP request"]
+    },
+    {
+      "id": "fn-cpp-http-run",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "HttpServer::run",
+      "signature": "int HttpServer::run()",
+      "file": "src/http_server.cpp",
+      "line": 81,
+      "module_id": "mod-http",
+      "receives_external_input": true,
+      "risk": "Critical",
+      "framework_role": "network_accept_loop",
+      "evidence": ["src/http_server.cpp:82 socket()", "src/http_server.cpp:95 bind()", "src/http_server.cpp:100 listen()", "src/http_server.cpp:106 accept()", "src/http_server.cpp:113 recv()"]
+    },
+    {
+      "id": "fn-cpp-http-parse-request",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "HttpServer::parseRequest",
+      "signature": "HttpRequest HttpServer::parseRequest(const std::string& raw) const",
+      "file": "src/http_server.cpp",
+      "line": 42,
+      "module_id": "mod-http",
+      "receives_external_input": true,
+      "risk": "High",
+      "framework_role": "request_parser",
+      "evidence": ["src/http_server.cpp:42 parses raw HTTP request string into HttpRequest struct"]
+    },
+    {
+      "id": "fn-cpp-http-serialize-response",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "HttpServer::serializeResponse",
+      "signature": "std::string HttpServer::serializeResponse(const HttpResponse& response) const",
+      "file": "src/http_server.cpp",
+      "line": 71,
+      "module_id": "mod-http",
+      "receives_external_input": false,
+      "risk": "Low",
+      "framework_role": "response_serializer",
+      "evidence": ["src/http_server.cpp:71 serializes HttpResponse to HTTP response string"]
+    },
+    {
+      "id": "fn-cpp-http-route",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "HttpServer::route",
+      "signature": "void HttpServer::route(const std::string& method, const std::string& path, Handler handler)",
+      "file": "src/http_server.cpp",
+      "line": 38,
+      "module_id": "mod-http",
+      "receives_external_input": false,
+      "risk": "Low",
+      "framework_role": "route_registration",
+      "evidence": ["src/http_server.cpp:38 registers handler for method+path combination"]
+    },
+    {
+      "id": "fn-cpp-main-handler-health",
+      "language": "c_cpp",
+      "kind": "lambda",
+      "symbol": "health_handler",
+      "signature": "HttpResponse(const HttpRequest&)",
+      "file": "src/main.cpp",
+      "line": 36,
+      "module_id": "mod-main",
+      "entry_point_id": "ep-cpp-main-health-001",
+      "receives_external_input": true,
+      "risk": "Low",
+      "framework_role": "route_handler",
+      "evidence": ["src/main.cpp:36 GET /health handler, returns fixed 'ok' string"]
+    },
+    {
+      "id": "fn-cpp-main-handler-login",
+      "language": "c_cpp",
+      "kind": "lambda",
+      "symbol": "login_handler",
+      "signature": "HttpResponse(const HttpRequest&)",
+      "file": "src/main.cpp",
+      "line": 40,
+      "module_id": "mod-main",
+      "entry_point_id": "ep-cpp-main-login-002",
+      "receives_external_input": true,
+      "risk": "Critical",
+      "framework_role": "route_handler",
+      "evidence": ["src/main.cpp:40 POST /login handler, extracts user/password from query, calls authenticate"]
+    },
+    {
+      "id": "fn-cpp-main-handler-files",
+      "language": "c_cpp",
+      "kind": "lambda",
+      "symbol": "files_handler",
+      "signature": "HttpResponse(const HttpRequest&)",
+      "file": "src/main.cpp",
+      "line": 54,
+      "module_id": "mod-main",
+      "entry_point_id": "ep-cpp-main-files-003",
+      "receives_external_input": true,
+      "risk": "Critical",
+      "framework_role": "route_handler",
+      "evidence": ["src/main.cpp:54 GET /files handler, extracts name from query, calls readTextFile"]
+    },
+    {
+      "id": "fn-cpp-main-handler-debug-ping",
+      "language": "c_cpp",
+      "kind": "lambda",
+      "symbol": "debug_ping_handler",
+      "signature": "HttpResponse(const HttpRequest&)",
+      "file": "src/main.cpp",
+      "line": 64,
+      "module_id": "mod-main",
+      "entry_point_id": "ep-cpp-main-debug-ping-004",
+      "receives_external_input": true,
+      "risk": "Critical",
+      "framework_role": "route_handler",
+      "evidence": ["src/main.cpp:64 POST /debug/ping handler, extracts host from query, calls pingHost"]
+    },
+    {
+      "id": "fn-cpp-main-handler-admin-export",
+      "language": "c_cpp",
+      "kind": "lambda",
+      "symbol": "admin_export_handler",
+      "signature": "HttpResponse(const HttpRequest&)",
+      "file": "src/main.cpp",
+      "line": 70,
+      "module_id": "mod-main",
+      "entry_point_id": "ep-cpp-main-admin-export-005",
+      "receives_external_input": true,
+      "risk": "High",
+      "framework_role": "route_handler",
+      "evidence": ["src/main.cpp:70 GET /admin/export handler, extracts token from query, calls exportSnapshot"]
+    },
+    {
+      "id": "fn-cpp-auth-authenticate",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "UserStore::authenticate",
+      "signature": "bool UserStore::authenticate(const std::string& username, const std::string& password) const",
+      "file": "src/user_store.cpp",
+      "line": 20,
+      "module_id": "mod-auth",
+      "receives_external_input": true,
+      "risk": "Critical",
+      "framework_role": "authentication_check",
+      "evidence": ["src/user_store.cpp:20 compares weakHash(password) against stored hash"]
+    },
+    {
+      "id": "fn-cpp-auth-weak-hash",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "UserStore::weakHash",
+      "signature": "std::string UserStore::weakHash(const std::string& password) const",
+      "file": "src/user_store.cpp",
+      "line": 12,
+      "module_id": "mod-auth",
+      "receives_external_input": true,
+      "risk": "High",
+      "framework_role": "password_hashing",
+      "evidence": ["src/user_store.cpp:12-18 djb2 hash algorithm, non-cryptographic, easily reversible"]
+    },
+    {
+      "id": "fn-cpp-auth-issue-session",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "UserStore::issueSession",
+      "signature": "std::string UserStore::issueSession(const std::string& username) const",
+      "file": "src/user_store.cpp",
+      "line": 33,
+      "module_id": "mod-auth",
+      "receives_external_input": true,
+      "risk": "High",
+      "framework_role": "session_token_generation",
+      "evidence": ["src/user_store.cpp:34-36 sprintf(token, \"sess-%s-%ld\", username, time(nullptr)), predictable format"]
+    },
+    {
+      "id": "fn-cpp-auth-is-admin",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "UserStore::isAdmin",
+      "signature": "bool UserStore::isAdmin(const std::string& username) const",
+      "file": "src/user_store.cpp",
+      "line": 28,
+      "module_id": "mod-auth",
+      "receives_external_input": false,
+      "risk": "Medium",
+      "framework_role": "authorization_check",
+      "evidence": ["src/user_store.cpp:28 checks admin flag in UserRecord, not called by any current route handler"]
+    },
+    {
+      "id": "fn-cpp-file-read-text",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "FileCache::readTextFile",
+      "signature": "std::string FileCache::readTextFile(const std::string& name) const",
+      "file": "src/file_cache.cpp",
+      "line": 10,
+      "module_id": "mod-file",
+      "receives_external_input": true,
+      "risk": "Critical",
+      "framework_role": "file_read",
+      "evidence": ["src/file_cache.cpp:11 std::ifstream file(baseDir_ + \"/\" + name) with no path sanitization"]
+    },
+    {
+      "id": "fn-cpp-file-export-snapshot",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "FileCache::exportSnapshot",
+      "signature": "std::string FileCache::exportSnapshot(const std::string& token) const",
+      "file": "src/file_cache.cpp",
+      "line": 21,
+      "module_id": "mod-file",
+      "receives_external_input": true,
+      "risk": "High",
+      "framework_role": "admin_export",
+      "evidence": ["src/file_cache.cpp:22 hardcoded token comparison: token != \"letmein-export\""]
+    },
+    {
+      "id": "fn-cpp-diag-ping-host",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "Diagnostics::pingHost",
+      "signature": "std::string Diagnostics::pingHost(const std::string& host) const",
+      "file": "src/diagnostics.cpp",
+      "line": 7,
+      "module_id": "mod-diag",
+      "receives_external_input": true,
+      "risk": "Critical",
+      "framework_role": "shell_command_execution",
+      "evidence": ["src/diagnostics.cpp:8 std::string command = \"ping -c 1 \" + host", "src/diagnostics.cpp:12 popen(command.c_str(), \"r\")"]
+    },
+    {
+      "id": "fn-cpp-audit-event",
+      "language": "c_cpp",
+      "kind": "function",
+      "symbol": "AuditLog::event",
+      "signature": "void AuditLog::event(const std::string& user, const std::string& action, const std::string& detail)",
+      "file": "include/audit_log.hpp",
+      "line": 11,
+      "module_id": "mod-audit",
+      "receives_external_input": true,
+      "risk": "Low",
+      "framework_role": "audit_logging",
+      "evidence": ["include/audit_log.hpp:11 writes timestamp, user, action, detail to log file"]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-main-to-http-route-health",
+      "from": "fn-cpp-main-main",
+      "to": "fn-cpp-http-route",
+      "callsite": "src/main.cpp:36",
+      "edge_type": "direct",
+      "data": ["GET", "/health", "health_handler"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "server.route(\"GET\", \"/health\", [](const HttpRequest&) { ... })"
+    },
+    {
+      "id": "edge-main-to-http-route-login",
+      "from": "fn-cpp-main-main",
+      "to": "fn-cpp-http-route",
+      "callsite": "src/main.cpp:40",
+      "edge_type": "direct",
+      "data": ["POST", "/login", "login_handler"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "server.route(\"POST\", \"/login\", [&](const HttpRequest& request) { ... })"
+    },
+    {
+      "id": "edge-main-to-http-route-files",
+      "from": "fn-cpp-main-main",
+      "to": "fn-cpp-http-route",
+      "callsite": "src/main.cpp:54",
+      "edge_type": "direct",
+      "data": ["GET", "/files", "files_handler"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "server.route(\"GET\", \"/files\", [&](const HttpRequest& request) { ... })"
+    },
+    {
+      "id": "edge-main-to-http-route-ping",
+      "from": "fn-cpp-main-main",
+      "to": "fn-cpp-http-route",
+      "callsite": "src/main.cpp:64",
+      "edge_type": "direct",
+      "data": ["POST", "/debug/ping", "debug_ping_handler"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "server.route(\"POST\", \"/debug/ping\", [&](const HttpRequest& request) { ... })"
+    },
+    {
+      "id": "edge-main-to-http-route-export",
+      "from": "fn-cpp-main-main",
+      "to": "fn-cpp-http-route",
+      "callsite": "src/main.cpp:70",
+      "edge_type": "direct",
+      "data": ["GET", "/admin/export", "admin_export_handler"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "server.route(\"GET\", \"/admin/export\", [&](const HttpRequest& request) { ... })"
+    },
+    {
+      "id": "edge-main-to-http-run",
+      "from": "fn-cpp-main-main",
+      "to": "fn-cpp-http-run",
+      "callsite": "src/main.cpp:77",
+      "edge_type": "direct",
+      "data": [],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "return server.run()"
+    },
+    {
+      "id": "edge-http-run-to-parse-request",
+      "from": "fn-cpp-http-run",
+      "to": "fn-cpp-http-parse-request",
+      "callsite": "src/http_server.cpp:119",
+      "edge_type": "direct",
+      "data": ["raw_buffer"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "HttpRequest request = parseRequest(std::string(buffer, static_cast<size_t>(n)))"
+    },
+    {
+      "id": "edge-http-run-to-handler-dispatch",
+      "from": "fn-cpp-http-run",
+      "to": "fn-cpp-main-handler-login",
+      "callsite": "src/http_server.cpp:127",
+      "edge_type": "indirect_callback",
+      "data": ["request"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "response = handler->second(request) dispatches to registered lambda handlers"
+    },
+    {
+      "id": "edge-http-run-to-handler-files",
+      "from": "fn-cpp-http-run",
+      "to": "fn-cpp-main-handler-files",
+      "callsite": "src/http_server.cpp:127",
+      "edge_type": "indirect_callback",
+      "data": ["request"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "response = handler->second(request) dispatches to registered lambda handlers"
+    },
+    {
+      "id": "edge-http-run-to-handler-ping",
+      "from": "fn-cpp-http-run",
+      "to": "fn-cpp-main-handler-debug-ping",
+      "callsite": "src/http_server.cpp:127",
+      "edge_type": "indirect_callback",
+      "data": ["request"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "response = handler->second(request) dispatches to registered lambda handlers"
+    },
+    {
+      "id": "edge-http-run-to-handler-export",
+      "from": "fn-cpp-http-run",
+      "to": "fn-cpp-main-handler-admin-export",
+      "callsite": "src/http_server.cpp:127",
+      "edge_type": "indirect_callback",
+      "data": ["request"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "response = handler->second(request) dispatches to registered lambda handlers"
+    },
+    {
+      "id": "edge-http-run-to-serialize-response",
+      "from": "fn-cpp-http-run",
+      "to": "fn-cpp-http-serialize-response",
+      "callsite": "src/http_server.cpp:130",
+      "edge_type": "direct",
+      "data": ["response"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "std::string raw = serializeResponse(response)"
+    },
+    {
+      "id": "edge-login-to-queryvalue-user",
+      "from": "fn-cpp-main-handler-login",
+      "to": "fn-cpp-main-queryvalue",
+      "callsite": "src/main.cpp:41",
+      "edge_type": "direct",
+      "data": ["request", "user"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "std::string username = queryValue(request, \"user\")"
+    },
+    {
+      "id": "edge-login-to-queryvalue-password",
+      "from": "fn-cpp-main-handler-login",
+      "to": "fn-cpp-main-queryvalue",
+      "callsite": "src/main.cpp:42",
+      "edge_type": "direct",
+      "data": ["request", "password"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "std::string password = queryValue(request, \"password\")"
+    },
+    {
+      "id": "edge-login-to-audit-attempt",
+      "from": "fn-cpp-main-handler-login",
+      "to": "fn-cpp-audit-event",
+      "callsite": "src/main.cpp:43",
+      "edge_type": "direct",
+      "data": ["username", "login-attempt", "request.body"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "audit.event(username, \"login-attempt\", request.body)"
+    },
+    {
+      "id": "edge-login-to-authenticate",
+      "from": "fn-cpp-main-handler-login",
+      "to": "fn-cpp-auth-authenticate",
+      "callsite": "src/main.cpp:45",
+      "edge_type": "direct",
+      "data": ["username", "password"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "users.authenticate(username, password)"
+    },
+    {
+      "id": "edge-login-to-issue-session",
+      "from": "fn-cpp-main-handler-login",
+      "to": "fn-cpp-auth-issue-session",
+      "callsite": "src/main.cpp:49",
+      "edge_type": "direct",
+      "data": ["username"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "std::string token = users.issueSession(username)"
+    },
+    {
+      "id": "edge-login-to-audit-success",
+      "from": "fn-cpp-main-handler-login",
+      "to": "fn-cpp-audit-event",
+      "callsite": "src/main.cpp:50",
+      "edge_type": "direct",
+      "data": ["username", "login-success", "token"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "audit.event(username, \"login-success\", token)"
+    },
+    {
+      "id": "edge-authenticate-to-weak-hash",
+      "from": "fn-cpp-auth-authenticate",
+      "to": "fn-cpp-auth-weak-hash",
+      "callsite": "src/user_store.cpp:25",
+      "edge_type": "direct",
+      "data": ["password"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "return user->second.passwordHash == weakHash(password)"
+    },
+    {
+      "id": "edge-files-to-queryvalue-name",
+      "from": "fn-cpp-main-handler-files",
+      "to": "fn-cpp-main-queryvalue",
+      "callsite": "src/main.cpp:55",
+      "edge_type": "direct",
+      "data": ["request", "name"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "std::string name = queryValue(request, \"name\")"
+    },
+    {
+      "id": "edge-files-to-audit",
+      "from": "fn-cpp-main-handler-files",
+      "to": "fn-cpp-audit-event",
+      "callsite": "src/main.cpp:56",
+      "edge_type": "direct",
+      "data": ["anonymous", "read-file", "name"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "audit.event(\"anonymous\", \"read-file\", name)"
+    },
+    {
+      "id": "edge-files-to-read-text-file",
+      "from": "fn-cpp-main-handler-files",
+      "to": "fn-cpp-file-read-text",
+      "callsite": "src/main.cpp:58",
+      "edge_type": "direct",
+      "data": ["name"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "files.readTextFile(name)"
+    },
+    {
+      "id": "edge-ping-to-queryvalue-host",
+      "from": "fn-cpp-main-handler-debug-ping",
+      "to": "fn-cpp-main-queryvalue",
+      "callsite": "src/main.cpp:65",
+      "edge_type": "direct",
+      "data": ["request", "host"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "std::string host = queryValue(request, \"host\")"
+    },
+    {
+      "id": "edge-ping-to-audit",
+      "from": "fn-cpp-main-handler-debug-ping",
+      "to": "fn-cpp-audit-event",
+      "callsite": "src/main.cpp:66",
+      "edge_type": "direct",
+      "data": ["operator", "debug-ping", "host"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "audit.event(\"operator\", \"debug-ping\", host)"
+    },
+    {
+      "id": "edge-ping-to-ping-host",
+      "from": "fn-cpp-main-handler-debug-ping",
+      "to": "fn-cpp-diag-ping-host",
+      "callsite": "src/main.cpp:67",
+      "edge_type": "direct",
+      "data": ["host"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "diagnostics.pingHost(host)"
+    },
+    {
+      "id": "edge-export-to-queryvalue-token",
+      "from": "fn-cpp-main-handler-admin-export",
+      "to": "fn-cpp-main-queryvalue",
+      "callsite": "src/main.cpp:71",
+      "edge_type": "direct",
+      "data": ["request", "token"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "std::string token = queryValue(request, \"token\")"
+    },
+    {
+      "id": "edge-export-to-audit",
+      "from": "fn-cpp-main-handler-admin-export",
+      "to": "fn-cpp-audit-event",
+      "callsite": "src/main.cpp:72",
+      "edge_type": "direct",
+      "data": ["admin", "export", "token"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "audit.event(\"admin\", \"export\", token)"
+    },
+    {
+      "id": "edge-export-to-export-snapshot",
+      "from": "fn-cpp-main-handler-admin-export",
+      "to": "fn-cpp-file-export-snapshot",
+      "callsite": "src/main.cpp:73",
+      "edge_type": "direct",
+      "data": ["token"],
+      "confidence": "high",
+      "analysis_backend": "model_inference",
+      "evidence": "files.exportSnapshot(token)"
+    }
+  ],
+  "data_flows": [
+    {
+      "id": "flow-network-to-popen-cmd-injection",
+      "source_node": "fn-cpp-http-run",
+      "source_kind": "network",
+      "sink_node": "fn-cpp-diag-ping-host",
+      "sink_kind": "command_execution",
+      "path": [
+        "fn-cpp-http-run",
+        "fn-cpp-http-parse-request",
+        "fn-cpp-main-handler-debug-ping",
+        "fn-cpp-main-queryvalue",
+        "fn-cpp-diag-ping-host"
+      ],
+      "sanitizers": [],
+      "cross_module": true,
+      "confidence": "high",
+      "evidence": [
+        "src/http_server.cpp:113 recv() reads raw network data",
+        "src/http_server.cpp:119 parseRequest() extracts query parameters",
+        "src/main.cpp:65 queryValue(request, \"host\") extracts host parameter",
+        "src/diagnostics.cpp:8 command = \"ping -c 1 \" + host (no sanitization)",
+        "src/diagnostics.cpp:12 popen(command.c_str(), \"r\") executes shell command"
+      ]
+    },
+    {
+      "id": "flow-network-to-path-traversal",
+      "source_node": "fn-cpp-http-run",
+      "source_kind": "network",
+      "sink_node": "fn-cpp-file-read-text",
+      "sink_kind": "file_read",
+      "path": [
+        "fn-cpp-http-run",
+        "fn-cpp-http-parse-request",
+        "fn-cpp-main-handler-files",
+        "fn-cpp-main-queryvalue",
+        "fn-cpp-file-read-text"
+      ],
+      "sanitizers": [],
+      "cross_module": true,
+      "confidence": "high",
+      "evidence": [
+        "src/http_server.cpp:113 recv() reads raw network data",
+        "src/http_server.cpp:119 parseRequest() extracts query parameters",
+        "src/main.cpp:55 queryValue(request, \"name\") extracts filename parameter",
+        "src/file_cache.cpp:11 std::ifstream file(baseDir_ + \"/\" + name) no path sanitization"
+      ]
+    },
+    {
+      "id": "flow-network-to-weak-auth",
+      "source_node": "fn-cpp-http-run",
+      "source_kind": "network",
+      "sink_node": "fn-cpp-auth-weak-hash",
+      "sink_kind": "weak_crypto",
+      "path": [
+        "fn-cpp-http-run",
+        "fn-cpp-http-parse-request",
+        "fn-cpp-main-handler-login",
+        "fn-cpp-main-queryvalue",
+        "fn-cpp-auth-authenticate",
+        "fn-cpp-auth-weak-hash"
+      ],
+      "sanitizers": [],
+      "cross_module": true,
+      "confidence": "high",
+      "evidence": [
+        "src/http_server.cpp:113 recv() reads raw network data",
+        "src/main.cpp:41-42 extracts user and password from query params",
+        "src/user_store.cpp:25 calls weakHash(password) for comparison",
+        "src/user_store.cpp:12-18 djb2 hash is non-cryptographic"
+      ]
+    },
+    {
+      "id": "flow-network-to-predictable-session",
+      "source_node": "fn-cpp-http-run",
+      "source_kind": "network",
+      "sink_node": "fn-cpp-auth-issue-session",
+      "sink_kind": "weak_randomness",
+      "path": [
+        "fn-cpp-http-run",
+        "fn-cpp-http-parse-request",
+        "fn-cpp-main-handler-login",
+        "fn-cpp-auth-issue-session"
+      ],
+      "sanitizers": [],
+      "cross_module": true,
+      "confidence": "high",
+      "evidence": [
+        "src/main.cpp:49 calls users.issueSession(username) after successful auth",
+        "src/user_store.cpp:34-36 sprintf(token, \"sess-%s-%ld\", username, time(nullptr)) predictable format"
+      ]
+    },
+    {
+      "id": "flow-network-to-hardcoded-token",
+      "source_node": "fn-cpp-http-run",
+      "source_kind": "network",
+      "sink_node": "fn-cpp-file-export-snapshot",
+      "sink_kind": "hardcoded_secret",
+      "path": [
+        "fn-cpp-http-run",
+        "fn-cpp-http-parse-request",
+        "fn-cpp-main-handler-admin-export",
+        "fn-cpp-main-queryvalue",
+        "fn-cpp-file-export-snapshot"
+      ],
+      "sanitizers": [],
+      "cross_module": true,
+      "confidence": "high",
+      "evidence": [
+        "src/main.cpp:71 extracts token from query parameter",
+        "src/file_cache.cpp:22 hardcoded comparison: token != \"letmein-export\""
+      ]
+    },
+    {
+      "id": "flow-network-to-audit-log-injection",
+      "source_node": "fn-cpp-http-run",
+      "source_kind": "network",
+      "sink_node": "fn-cpp-audit-event",
+      "sink_kind": "log_injection",
+      "path": [
+        "fn-cpp-http-run",
+        "fn-cpp-http-parse-request",
+        "fn-cpp-main-handler-login",
+        "fn-cpp-audit-event"
+      ],
+      "sanitizers": [],
+      "cross_module": false,
+      "confidence": "medium",
+      "evidence": [
+        "src/main.cpp:43 audit.event(username, \"login-attempt\", request.body) passes unsanitized user input to log",
+        "include/audit_log.hpp:12-14 writes user-controlled data directly to log file without sanitization"
+      ]
+    }
+  ],
+  "unresolved": [
+    {
+      "symbol": "handler->second(request)",
+      "file": "src/http_server.cpp",
+      "line": 127,
+      "reason": "Handler dispatch via std::function stored in map; individual handler lambdas are registered at runtime in main.cpp. The mapping from route key to specific handler is resolved statically from source but the callback dispatch is indirect.",
+      "suggested_followup": "All 5 handlers are registered in main.cpp:36-74 and have been individually modeled as edges."
+    }
+  ]
+}

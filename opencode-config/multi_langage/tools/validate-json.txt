@@ -1,0 +1,21 @@
+Validate a JSON file for correct syntax and selected harness schemas.
+
+Use this tool after writing any JSON file to verify it is valid. This is mandatory for all JSON outputs in the scanning pipeline (project_model.json, call_graph.json, scan_profile.json, candidates_*.json, verified.json, scan_log.json).
+
+For project_model.json, call_graph.json, and scan_profile.json, the tool also performs semantic checks:
+- schema_version is "1.0"
+- supported language enums are used
+- modules/files/entry_points/nodes/edges/data_flows have stable IDs
+- project_model entry points reference known files/modules
+- call_graph edges and data flow paths reference existing nodes
+- deprecated call_graph.functions is rejected in favor of nodes/edges/data_flows
+- scan_profile contains a supported profile name, max_rounds, repeat pass settings, source, and profile_config booleans/numbers
+
+Parameters:
+- path: Absolute path to the JSON file to validate
+
+Returns:
+- PASS: The file contains valid JSON and passes any applicable harness schema checks. Includes file size and top-level keys.
+- FAIL: The file contains invalid JSON or fails an applicable harness schema check. Syntax failures include the parse error message, line/column, and nearby context. Schema failures include a concise error list.
+
+If validation fails, read the error details, fix the JSON content, rewrite the file, and call this tool again. Retry at most 2 times.

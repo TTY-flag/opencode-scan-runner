@@ -1,0 +1,39 @@
+{
+  "id": "go",
+  "display_name": "Go",
+  "extensions": [".go"],
+  "build_files": ["go.mod", "go.sum", "Gopkg.toml", "Gopkg.lock"],
+  "ignore_dirs": ["vendor", "bin", "dist", ".go-build"],
+  "entry_point_patterns": [
+    "func\\s+main\\s*\\(",
+    "http\\.HandleFunc\\s*\\(",
+    "\\.HandleFunc\\s*\\(",
+    "\\.GET\\s*\\(",
+    "\\.POST\\s*\\(",
+    "grpc\\.NewServer\\s*\\("
+  ],
+  "frameworks": [
+    {
+      "name": "net/http",
+      "markers": ["net/http", "http.HandleFunc", "http.ListenAndServe"]
+    },
+    {
+      "name": "gin",
+      "markers": ["github.com/gin-gonic/gin", ".GET(", ".POST("]
+    },
+    {
+      "name": "echo",
+      "markers": ["github.com/labstack/echo", "echo.New()"]
+    },
+    {
+      "name": "fiber",
+      "markers": ["github.com/gofiber/fiber", "fiber.New()"]
+    }
+  ],
+  "source_kinds": ["http_request", "path_param", "query_param", "header", "body", "cmdline", "env", "file", "grpc_request"],
+  "sink_kinds": ["sql_execution", "command_execution", "ssrf", "path_operation", "template_render", "deserialization", "file_write"],
+  "sanitizer_kinds": ["parameterized_query", "exec_command_args", "url_allowlist", "filepath_clean_and_prefix_check", "template_escape", "strconv_parse", "regexp_allowlist"],
+  "taint_skill": "go-taint-tracking",
+  "scanner": "language-module-scanner",
+  "security_scanner": "language-security-module-scanner"
+}

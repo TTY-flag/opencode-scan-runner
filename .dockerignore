@@ -1,0 +1,12 @@
+.git
+.env
+.env.local
+.env*.local
+jobs/*.env
+output/
+build/
+*.audit.log
+*.log
+opencode-config/**/node_modules/
+opencode-config/**/package-lock.json
+opencode-config/**/bun.lock

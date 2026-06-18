@@ -1,0 +1,57 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // "plugin": ["opencode-openai-codex-auth"],
+  // "enterprise": {
+  //   "url": "https://enterprise.dev.opencode.ai",
+  // },
+  // 工具权限配置
+  "permission": {
+    // 文件操作
+    "read": "allow",
+    "edit": "allow",
+    "grep": "allow",
+    "glob": "allow",
+    "list": "allow",
+    // LSP 代码智能（实验性功能）
+    "lsp": "allow",
+    // 容器内运行，允许 harness 访问项目目录外的容器文件系统路径
+    "external_directory": "allow",
+    // 网络访问（用于漏洞利用分析时搜索 CVE、已知利用方式等）
+    "webfetch": "allow",
+    "websearch": "allow",
+    // bash 命令权限（允许所有命令）
+    "bash": {
+      "*": "allow",
+    },
+    // 任务管理
+    "todowrite": "allow",
+    "todoread": "allow",
+    // 用户交互
+    "question": "allow",
+  },
+  "provider": {
+    "alibaba-cn": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Alibaba Model Studio China",
+      "options": {
+        "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      },
+      "models": {
+        "glm-5": {
+          "name": "GLM-5",
+        },
+        "qwen3.7-max": {
+          "name": "Qwen3.7 Max",
+        },
+      },
+    },
+    "opencode": {
+      "options": {},
+    },
+  },
+  "model": "alibaba-cn/qwen3.7-max",
+  "tools": {
+    "github-triage": false,
+    "github-pr-search": false,
+  },
+}

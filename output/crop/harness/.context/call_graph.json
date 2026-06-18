@@ -1,0 +1,320 @@
+{
+  "functions": {
+    "main@src/main.cpp": {
+      "defined_at": 27,
+      "calls": [
+        "queryValue@src/main.cpp",
+        "text@src/main.cpp",
+        "HttpServer::HttpServer@src/http_server.cpp",
+        "HttpServer::route@src/http_server.cpp",
+        "HttpServer::run@src/http_server.cpp",
+        "UserStore::UserStore@src/user_store.cpp",
+        "UserStore::authenticate@src/user_store.cpp",
+        "UserStore::issueSession@src/user_store.cpp",
+        "FileCache::FileCache@src/file_cache.cpp",
+        "FileCache::readTextFile@src/file_cache.cpp",
+        "FileCache::exportSnapshot@src/file_cache.cpp",
+        "Diagnostics::Diagnostics@include/diagnostics.hpp",
+        "Diagnostics::pingHost@src/diagnostics.cpp",
+        "AuditLog::AuditLog@include/audit_log.hpp",
+        "AuditLog::event@include/audit_log.hpp"
+      ],
+      "called_by": [],
+      "receives_external_input": true,
+      "risk": "High"
+    },
+    "queryValue@src/main.cpp": {
+      "defined_at": 13,
+      "calls": [],
+      "called_by": [
+        "lambda(POST /login)@src/main.cpp",
+        "lambda(GET /files)@src/main.cpp",
+        "lambda(POST /debug/ping)@src/main.cpp",
+        "lambda(GET /admin/export)@src/main.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "High"
+    },
+    "text@src/main.cpp": {
+      "defined_at": 18,
+      "calls": [],
+      "called_by": [
+        "lambda(GET /health)@src/main.cpp",
+        "lambda(POST /login)@src/main.cpp",
+        "lambda(GET /files)@src/main.cpp",
+        "lambda(POST /debug/ping)@src/main.cpp",
+        "lambda(GET /admin/export)@src/main.cpp"
+      ],
+      "receives_external_input": false,
+      "risk": "Low"
+    },
+    "HttpServer::HttpServer@src/http_server.cpp": {
+      "defined_at": 36,
+      "calls": [],
+      "called_by": [
+        "main@src/main.cpp"
+      ],
+      "receives_external_input": false,
+      "risk": "Low"
+    },
+    "HttpServer::route@src/http_server.cpp": {
+      "defined_at": 38,
+      "calls": [
+        "routeKey@src/http_server.cpp"
+      ],
+      "called_by": [
+        "main@src/main.cpp"
+      ],
+      "receives_external_input": false,
+      "risk": "Low"
+    },
+    "HttpServer::run@src/http_server.cpp": {
+      "defined_at": 81,
+      "calls": [
+        "HttpServer::parseRequest@src/http_server.cpp",
+        "HttpServer::serializeResponse@src/http_server.cpp",
+        "routeKey@src/http_server.cpp"
+      ],
+      "called_by": [
+        "main@src/main.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "Critical"
+    },
+    "HttpServer::parseRequest@src/http_server.cpp": {
+      "defined_at": 42,
+      "calls": [
+        "parseQuery@src/http_server.cpp"
+      ],
+      "called_by": [
+        "HttpServer::run@src/http_server.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "High"
+    },
+    "HttpServer::serializeResponse@src/http_server.cpp": {
+      "defined_at": 71,
+      "calls": [],
+      "called_by": [
+        "HttpServer::run@src/http_server.cpp"
+      ],
+      "receives_external_input": false,
+      "risk": "Low"
+    },
+    "routeKey@src/http_server.cpp": {
+      "defined_at": 15,
+      "calls": [],
+      "called_by": [
+        "HttpServer::route@src/http_server.cpp",
+        "HttpServer::run@src/http_server.cpp"
+      ],
+      "receives_external_input": false,
+      "risk": "Low"
+    },
+    "parseQuery@src/http_server.cpp": {
+      "defined_at": 19,
+      "calls": [],
+      "called_by": [
+        "HttpServer::parseRequest@src/http_server.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "Medium"
+    },
+    "UserStore::UserStore@src/user_store.cpp": {
+      "defined_at": 6,
+      "calls": [
+        "UserStore::weakHash@src/user_store.cpp"
+      ],
+      "called_by": [
+        "main@src/main.cpp"
+      ],
+      "receives_external_input": false,
+      "risk": "High"
+    },
+    "UserStore::authenticate@src/user_store.cpp": {
+      "defined_at": 20,
+      "calls": [
+        "UserStore::weakHash@src/user_store.cpp"
+      ],
+      "called_by": [
+        "lambda(POST /login)@src/main.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "High"
+    },
+    "UserStore::isAdmin@src/user_store.cpp": {
+      "defined_at": 28,
+      "calls": [],
+      "called_by": [],
+      "receives_external_input": false,
+      "risk": "Medium"
+    },
+    "UserStore::issueSession@src/user_store.cpp": {
+      "defined_at": 33,
+      "calls": [],
+      "called_by": [
+        "lambda(POST /login)@src/main.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "High"
+    },
+    "UserStore::weakHash@src/user_store.cpp": {
+      "defined_at": 12,
+      "calls": [],
+      "called_by": [
+        "UserStore::UserStore@src/user_store.cpp",
+        "UserStore::authenticate@src/user_store.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "High"
+    },
+    "FileCache::FileCache@src/file_cache.cpp": {
+      "defined_at": 8,
+      "calls": [],
+      "called_by": [
+        "main@src/main.cpp"
+      ],
+      "receives_external_input": false,
+      "risk": "Low"
+    },
+    "FileCache::readTextFile@src/file_cache.cpp": {
+      "defined_at": 10,
+      "calls": [],
+      "called_by": [
+        "lambda(GET /files)@src/main.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "Critical"
+    },
+    "FileCache::exportSnapshot@src/file_cache.cpp": {
+      "defined_at": 21,
+      "calls": [],
+      "called_by": [
+        "lambda(GET /admin/export)@src/main.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "High"
+    },
+    "Diagnostics::pingHost@src/diagnostics.cpp": {
+      "defined_at": 7,
+      "calls": [],
+      "called_by": [
+        "lambda(POST /debug/ping)@src/main.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "Critical"
+    },
+    "AuditLog::AuditLog@include/audit_log.hpp": {
+      "defined_at": 9,
+      "calls": [],
+      "called_by": [
+        "main@src/main.cpp"
+      ],
+      "receives_external_input": false,
+      "risk": "Low"
+    },
+    "AuditLog::event@include/audit_log.hpp": {
+      "defined_at": 11,
+      "calls": [],
+      "called_by": [
+        "lambda(POST /login)@src/main.cpp",
+        "lambda(GET /files)@src/main.cpp",
+        "lambda(POST /debug/ping)@src/main.cpp",
+        "lambda(GET /admin/export)@src/main.cpp"
+      ],
+      "receives_external_input": true,
+      "risk": "Medium"
+    }
+  },
+  "data_flows": [
+    {
+      "source": "recv@src/http_server.cpp:113",
+      "path": [
+        "HttpServer::run@src/http_server.cpp:119",
+        "HttpServer::parseRequest@src/http_server.cpp:42",
+        "parseQuery@src/http_server.cpp:19",
+        "handler callback@src/main.cpp:64",
+        "queryValue@src/main.cpp:65"
+      ],
+      "sink": "popen@src/diagnostics.cpp:12",
+      "sink_type": "command_execution"
+    },
+    {
+      "source": "recv@src/http_server.cpp:113",
+      "path": [
+        "HttpServer::run@src/http_server.cpp:119",
+        "HttpServer::parseRequest@src/http_server.cpp:42",
+        "parseQuery@src/http_server.cpp:19",
+        "handler callback@src/main.cpp:54",
+        "queryValue@src/main.cpp:55"
+      ],
+      "sink": "ifstream@src/file_cache.cpp:11",
+      "sink_type": "file_access"
+    },
+    {
+      "source": "recv@src/http_server.cpp:113",
+      "path": [
+        "HttpServer::run@src/http_server.cpp:119",
+        "HttpServer::parseRequest@src/http_server.cpp:42",
+        "parseQuery@src/http_server.cpp:19",
+        "handler callback@src/main.cpp:40",
+        "queryValue@src/main.cpp:41"
+      ],
+      "sink": "UserStore::authenticate@src/user_store.cpp:20",
+      "sink_type": "authentication_bypass"
+    },
+    {
+      "source": "recv@src/http_server.cpp:113",
+      "path": [
+        "HttpServer::run@src/http_server.cpp:119",
+        "HttpServer::parseRequest@src/http_server.cpp:42",
+        "parseQuery@src/http_server.cpp:19",
+        "handler callback@src/main.cpp:40",
+        "queryValue@src/main.cpp:41"
+      ],
+      "sink": "UserStore::weakHash@src/user_store.cpp:12",
+      "sink_type": "weak_cryptography"
+    },
+    {
+      "source": "recv@src/http_server.cpp:113",
+      "path": [
+        "HttpServer::run@src/http_server.cpp:119",
+        "HttpServer::parseRequest@src/http_server.cpp:42",
+        "parseQuery@src/http_server.cpp:19",
+        "handler callback@src/main.cpp:70",
+        "queryValue@src/main.cpp:71"
+      ],
+      "sink": "FileCache::exportSnapshot@src/file_cache.cpp:22",
+      "sink_type": "authorization_bypass"
+    },
+    {
+      "source": "recv@src/http_server.cpp:113",
+      "path": [
+        "HttpServer::run@src/http_server.cpp:119",
+        "HttpServer::parseRequest@src/http_server.cpp:42",
+        "parseQuery@src/http_server.cpp:19",
+        "handler callback@src/main.cpp:40",
+        "queryValue@src/main.cpp:41"
+      ],
+      "sink": "AuditLog::event@include/audit_log.hpp:11",
+      "sink_type": "log_injection"
+    },
+    {
+      "source": "recv@src/http_server.cpp:113",
+      "path": [
+        "HttpServer::run@src/http_server.cpp:119",
+        "HttpServer::parseRequest@src/http_server.cpp:42"
+      ],
+      "sink": "buffer[4096]@src/http_server.cpp:111",
+      "sink_type": "fixed_buffer_read"
+    },
+    {
+      "source": "UserStore::issueSession@src/user_store.cpp:33",
+      "path": [
+        "sprintf@src/user_store.cpp:35"
+      ],
+      "sink": "lambda(POST /login) response@src/main.cpp:51",
+      "sink_type": "predictable_token"
+    }
+  ]
+}

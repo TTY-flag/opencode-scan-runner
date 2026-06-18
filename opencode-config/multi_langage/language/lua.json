@@ -1,0 +1,34 @@
+{
+  "id": "lua",
+  "display_name": "Lua",
+  "extensions": [".lua", ".rockspec"],
+  "build_files": ["*.rockspec", "lua_modules", "nginx.conf", "openresty.conf"],
+  "ignore_dirs": ["lua_modules", ".luarocks", "vendor", "third_party"],
+  "entry_point_patterns": [
+    "ngx\\.req\\.get_uri_args\\s*\\(",
+    "ngx\\.req\\.get_post_args\\s*\\(",
+    "ngx\\.var\\.",
+    "function\\s+[_A-Za-z0-9:.]+\\s*\\(",
+    "arg\\s*\\["
+  ],
+  "frameworks": [
+    {
+      "name": "openresty",
+      "markers": ["ngx.", "content_by_lua", "access_by_lua"]
+    },
+    {
+      "name": "kong",
+      "markers": ["kong.", "handler.lua", "schema.lua"]
+    },
+    {
+      "name": "lua_plugin",
+      "markers": ["require(", "module("]
+    }
+  ],
+  "source_kinds": ["openresty_request", "nginx_variable", "cmdline", "env", "file", "plugin_callback"],
+  "sink_kinds": ["command_execution", "code_execution", "sql_execution", "path_operation", "ssrf", "redis_command", "template_render"],
+  "sanitizer_kinds": ["allowlist", "tonumber", "ngx_re_match_allowlist", "path_canonicalization", "sql_parameterization", "shell_quote"],
+  "taint_skill": "lua-taint-tracking",
+  "scanner": "language-module-scanner",
+  "security_scanner": "language-security-module-scanner"
+}

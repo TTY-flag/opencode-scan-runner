@@ -1,0 +1,63 @@
+SQLite-based vulnerability database for the multi-agent C/C++ vulnerability scanner.
+
+Replaces the previous JSON file-based intermediate storage (candidates_df_*.json, candidates_sec_*.json, verified_*.json) with a single SQLite database file (scan.db).
+
+Commands:
+
+1. init - Create or reset the database with all required tables and indexes. Call once at the start of a scan.
+   Required: db_path
+
+2. insert - Batch insert candidate vulnerabilities from a scanner.
+   Required: db_path, vulnerabilities (JSON array string of vulnerability objects)
+   Each object must have: id, source_agent, source_module
+   Optional fields: type, cwe, severity, description, file, line_start, line_end, function_name, code_snippet, data_flow, pre_validated, cross_module, modules_involved
+
+3. query - Query vulnerabilities with filters. Returns JSON array of matching rows.
+   Required: db_path
+   Optional: phase, status, source_module, source_agent, min_confidence, exclude_status, limit, offset, ids (comma-separated IDs)
+
+4. update - Update a single vulnerability's fields (e.g. verification results).
+   Required: db_path, id, fields (JSON object string with fields to update)
+   Automatically sets phase='verified' and updated_at.
+
+5. batch-update - Update multiple vulnerabilities at once.
+   Required: db_path, updates (JSON array string of {id, fields} objects)
+
+6. dedup - Deduplicate candidates by (file, line_start, function_name, type). Keeps the highest-severity entry, marks others as dedup_kept=0. Merges source_agent info.
+   Required: db_path
+   Returns dedup statistics.
+
+7. stats - Get aggregated statistics.
+   Required: db_path
+   Optional: phase (filter by phase)
+   Returns counts by status, severity, module, and totals.
+
+8. log - Record an agent execution event.
+   Required: db_path, agent_name
+   Optional: module_name, phase, status, message, item_count
+
+9. export-json - Export query results to a JSON file (for debugging/compatibility).
+   Required: db_path, output
+   Optional: phase, status, source_module, min_confidence, exclude_status
+
+Parameters:
+- db_path: Absolute path to the SQLite database file (e.g. {CONTEXT_DIR}/scan.db)
+- command: The operation to perform
+- vulnerabilities: JSON array string for insert command
+- id: Vulnerability ID for update command
+- fields: JSON object string for update command
+- updates: JSON array of {id, fields} for batch-update
+- phase: Filter by phase (candidate/verified)
+- status: Filter by status (CONFIRMED/LIKELY/POSSIBLE/FALSE_POSITIVE)
+- source_module: Filter by module name
+- source_agent: Filter by source agent
+- min_confidence: Minimum confidence score filter
+- exclude_status: Exclude vulnerabilities with this status
+- limit: Max number of results to return
+- offset: Pagination offset
+- ids: Comma-separated list of vulnerability IDs to query
+- agent_name: Agent name for log command
+- module_name: Module name for log command
+- message: Log message
+- item_count: Number of items processed (for log)
+- output: Output file path for export-json

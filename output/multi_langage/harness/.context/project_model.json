@@ -1,0 +1,377 @@
+{
+  "schema_version": "1.0",
+  "project_name": "edge_gateway_demo",
+  "source_root": "/scan/project",
+  "scan_time": "2026-06-18T00:00:00Z",
+  "lsp_available": false,
+  "total_files": 10,
+  "total_lines": 401,
+  "scan_scope": {
+    "include": ["src/**", "include/**"],
+    "exclude": ["build/**", "data/**", ".git/**"],
+    "ignored_dirs": ["build", ".git", "data"]
+  },
+  "project_profile": {
+    "project_type": "network_service",
+    "deployment_model": "Linux 边缘网关服务，单进程同步 HTTP 服务，通过 POSIX socket 监听 INADDR_ANY (0.0.0.0) 上的 TCP 端口，默认 8080。无 TLS，无认证中间件，无速率限制。",
+    "trust_boundaries": [
+      {
+        "boundary": "Network Interface",
+        "trusted_side": "Application logic (HTTP handler, business modules)",
+        "untrusted_side": "Remote TCP clients connecting to 0.0.0.0:port",
+        "risk": "Critical"
+      },
+      {
+        "boundary": "Shell Execution Boundary",
+        "trusted_side": "Application code",
+        "untrusted_side": "Shell commands executed via popen() with user-controlled input",
+        "risk": "Critical"
+      },
+      {
+        "boundary": "Filesystem Boundary",
+        "trusted_side": "Application data directory (data/)",
+        "untrusted_side": "User-controlled file paths via query parameters",
+        "risk": "High"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "name": "POSIX sockets (sys/socket.h, arpa/inet.h, netinet/in.h, unistd.h)",
+      "version": "system",
+      "source": "src/http_server.cpp includes",
+      "evidence": "src/http_server.cpp:3-6"
+    },
+    {
+      "name": "C++17 Standard Library",
+      "version": "C++17",
+      "source": "CMakeLists.txt",
+      "evidence": "CMakeLists.txt:4 set(CMAKE_CXX_STANDARD 17)"
+    }
+  ],
+  "build_systems": [
+    {
+      "type": "cmake",
+      "file": "CMakeLists.txt",
+      "confidence": "high"
+    }
+  ],
+  "modules": [
+    {
+      "id": "mod-http",
+      "name": "HTTP Server",
+      "path": "src",
+      "language": "c_cpp",
+      "languages": ["c_cpp"],
+      "frameworks": ["posix_sockets"],
+      "components": ["src/http_server.cpp", "include/http_server.hpp"],
+      "risk": "Critical",
+      "priority": 1,
+      "evidence": [
+        "src/http_server.cpp:82 socket(AF_INET, SOCK_STREAM, 0)",
+        "src/http_server.cpp:92 address.sin_addr.s_addr = INADDR_ANY",
+        "src/http_server.cpp:106 accept(fd, nullptr, nullptr)",
+        "src/http_server.cpp:113 recv(client, buffer, sizeof(buffer) - 1, 0)"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "mod-auth",
+      "name": "User Store / Authentication",
+      "path": "src",
+      "language": "c_cpp",
+      "languages": ["c_cpp"],
+      "frameworks": [],
+      "components": ["src/user_store.cpp", "include/user_store.hpp"],
+      "risk": "Critical",
+      "priority": 2,
+      "evidence": [
+        "src/user_store.cpp:7-9 hardcoded users with weak djb2 hash",
+        "src/user_store.cpp:12-18 weakHash() uses non-cryptographic djb2 algorithm",
+        "src/user_store.cpp:34-36 predictable session tokens sess-{user}-{timestamp}"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "mod-file",
+      "name": "File Cache",
+      "path": "src",
+      "language": "c_cpp",
+      "languages": ["c_cpp"],
+      "frameworks": [],
+      "components": ["src/file_cache.cpp", "include/file_cache.hpp"],
+      "risk": "Critical",
+      "priority": 3,
+      "evidence": [
+        "src/file_cache.cpp:11 baseDir_ + \"/\" + name with no path sanitization",
+        "src/file_cache.cpp:22 hardcoded token check token != \"letmein-export\""
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "mod-diag",
+      "name": "Diagnostics",
+      "path": "src",
+      "language": "c_cpp",
+      "languages": ["c_cpp"],
+      "frameworks": [],
+      "components": ["src/diagnostics.cpp", "include/diagnostics.hpp"],
+      "risk": "Critical",
+      "priority": 1,
+      "evidence": [
+        "src/diagnostics.cpp:8 std::string command = \"ping -c 1 \" + host",
+        "src/diagnostics.cpp:12 popen(command.c_str(), \"r\") with unsanitized user input"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "mod-audit",
+      "name": "Audit Log",
+      "path": "include",
+      "language": "c_cpp",
+      "languages": ["c_cpp"],
+      "frameworks": [],
+      "components": ["include/audit_log.hpp"],
+      "risk": "Low",
+      "priority": 6,
+      "evidence": [
+        "include/audit_log.hpp:11 event() logs user, action, detail to file"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "mod-main",
+      "name": "Main / Router",
+      "path": "src",
+      "language": "c_cpp",
+      "languages": ["c_cpp"],
+      "frameworks": [],
+      "components": ["src/main.cpp"],
+      "risk": "High",
+      "priority": 2,
+      "evidence": [
+        "src/main.cpp:36-74 registers 5 HTTP route handlers",
+        "src/main.cpp:13-16 queryValue() extracts query parameters from requests"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "files": [
+    {
+      "id": "file-src-main-cpp",
+      "path": "src/main.cpp",
+      "language": "c_cpp",
+      "risk": "High",
+      "module_id": "mod-main",
+      "module": "Main / Router",
+      "lines": 78,
+      "priority": 2,
+      "evidence": ["contains all HTTP route handler lambdas and query parameter extraction"]
+    },
+    {
+      "id": "file-src-http-server-cpp",
+      "path": "src/http_server.cpp",
+      "language": "c_cpp",
+      "risk": "Critical",
+      "module_id": "mod-http",
+      "module": "HTTP Server",
+      "lines": 134,
+      "priority": 1,
+      "evidence": ["contains socket/bind/listen/accept/recv, request parsing, response serialization"]
+    },
+    {
+      "id": "file-src-user-store-cpp",
+      "path": "src/user_store.cpp",
+      "language": "c_cpp",
+      "risk": "Critical",
+      "module_id": "mod-auth",
+      "module": "User Store / Authentication",
+      "lines": 37,
+      "priority": 2,
+      "evidence": ["hardcoded credentials, weak hash, predictable session tokens"]
+    },
+    {
+      "id": "file-src-file-cache-cpp",
+      "path": "src/file_cache.cpp",
+      "language": "c_cpp",
+      "risk": "Critical",
+      "module_id": "mod-file",
+      "module": "File Cache",
+      "lines": 31,
+      "priority": 3,
+      "evidence": ["unsanitized file path concatenation, hardcoded admin token"]
+    },
+    {
+      "id": "file-src-diagnostics-cpp",
+      "path": "src/diagnostics.cpp",
+      "language": "c_cpp",
+      "risk": "Critical",
+      "module_id": "mod-diag",
+      "module": "Diagnostics",
+      "lines": 22,
+      "priority": 1,
+      "evidence": ["popen() with unsanitized user-controlled shell command"]
+    },
+    {
+      "id": "file-include-http-server-hpp",
+      "path": "include/http_server.hpp",
+      "language": "c_cpp",
+      "risk": "Medium",
+      "module_id": "mod-http",
+      "module": "HTTP Server",
+      "lines": 35,
+      "priority": 3,
+      "evidence": ["defines HttpRequest/HttpResponse structs and HttpServer class interface"]
+    },
+    {
+      "id": "file-include-file-cache-hpp",
+      "path": "include/file_cache.hpp",
+      "language": "c_cpp",
+      "risk": "Medium",
+      "module_id": "mod-file",
+      "module": "File Cache",
+      "lines": 14,
+      "priority": 4,
+      "evidence": ["declares FileCache class with readTextFile and exportSnapshot"]
+    },
+    {
+      "id": "file-include-user-store-hpp",
+      "path": "include/user_store.hpp",
+      "language": "c_cpp",
+      "risk": "Medium",
+      "module_id": "mod-auth",
+      "module": "User Store / Authentication",
+      "lines": 23,
+      "priority": 4,
+      "evidence": ["declares UserStore class with authenticate, isAdmin, issueSession"]
+    },
+    {
+      "id": "file-include-diagnostics-hpp",
+      "path": "include/diagnostics.hpp",
+      "language": "c_cpp",
+      "risk": "Medium",
+      "module_id": "mod-diag",
+      "module": "Diagnostics",
+      "lines": 8,
+      "priority": 4,
+      "evidence": ["declares Diagnostics class with pingHost"]
+    },
+    {
+      "id": "file-include-audit-log-hpp",
+      "path": "include/audit_log.hpp",
+      "language": "c_cpp",
+      "risk": "Low",
+      "module_id": "mod-audit",
+      "module": "Audit Log",
+      "lines": 19,
+      "priority": 6,
+      "evidence": ["header-only AuditLog class, file-based event logging"]
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "ep-cpp-main-health-001",
+      "name": "GET /health",
+      "type": "network",
+      "file": "src/main.cpp",
+      "line": 36,
+      "function": "health_handler_lambda",
+      "module_id": "mod-main",
+      "parameters": [],
+      "trust_level": "untrusted_network",
+      "justification": "TCP 0.0.0.0 上的公开 HTTP 端点，任何远程客户端可访问，但仅返回固定字符串，攻击面极小",
+      "description": "Health check endpoint, returns 'ok'",
+      "evidence": ["src/main.cpp:36 server.route(\"GET\", \"/health\", ...)"],
+      "confidence": "high"
+    },
+    {
+      "id": "ep-cpp-main-login-002",
+      "name": "POST /login",
+      "type": "network",
+      "file": "src/main.cpp",
+      "line": 40,
+      "function": "login_handler_lambda",
+      "module_id": "mod-main",
+      "parameters": ["user", "password"],
+      "trust_level": "untrusted_network",
+      "justification": "TCP 0.0.0.0 上的认证端点，远程客户端可通过 query 参数提交用户名和密码，是暴力破解和凭证填充的攻击目标",
+      "description": "User authentication endpoint with query-string credentials",
+      "evidence": [
+        "src/main.cpp:40 server.route(\"POST\", \"/login\", ...)",
+        "src/main.cpp:41-42 extracts user and password from query parameters",
+        "src/main.cpp:45 calls users.authenticate(username, password)"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "ep-cpp-main-files-003",
+      "name": "GET /files",
+      "type": "network",
+      "file": "src/main.cpp",
+      "line": 54,
+      "function": "files_handler_lambda",
+      "module_id": "mod-main",
+      "parameters": ["name"],
+      "trust_level": "untrusted_network",
+      "justification": "TCP 0.0.0.0 上的文件下载端点，远程客户端可通过 name 参数指定任意文件路径，存在路径遍历风险",
+      "description": "File download endpoint with user-controlled filename",
+      "evidence": [
+        "src/main.cpp:54 server.route(\"GET\", \"/files\", ...)",
+        "src/main.cpp:55 extracts name from query parameter",
+        "src/main.cpp:58 calls files.readTextFile(name) which concatenates baseDir_ + \"/\" + name without sanitization"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "ep-cpp-main-debug-ping-004",
+      "name": "POST /debug/ping",
+      "type": "network",
+      "file": "src/main.cpp",
+      "line": 64,
+      "function": "debug_ping_handler_lambda",
+      "module_id": "mod-main",
+      "parameters": ["host"],
+      "trust_level": "untrusted_network",
+      "justification": "TCP 0.0.0.0 上的诊断端点，远程客户端可通过 host 参数注入任意 shell 命令，是最严重的远程代码执行攻击面",
+      "description": "Diagnostic ping endpoint with user-controlled host parameter passed to popen()",
+      "evidence": [
+        "src/main.cpp:64 server.route(\"POST\", \"/debug/ping\", ...)",
+        "src/main.cpp:65 extracts host from query parameter",
+        "src/main.cpp:67 calls diagnostics.pingHost(host) which executes popen(\"ping -c 1 \" + host)"
+      ],
+      "confidence": "high"
+    },
+    {
+      "id": "ep-cpp-main-admin-export-005",
+      "name": "GET /admin/export",
+      "type": "network",
+      "file": "src/main.cpp",
+      "line": 70,
+      "function": "admin_export_handler_lambda",
+      "module_id": "mod-main",
+      "parameters": ["token"],
+      "trust_level": "untrusted_network",
+      "justification": "TCP 0.0.0.0 上的管理员导出端点，使用硬编码 token 进行认证，任何能访问服务的远程客户端可尝试猜测或使用泄露的 token",
+      "description": "Admin export endpoint with hardcoded token authentication",
+      "evidence": [
+        "src/main.cpp:70 server.route(\"GET\", \"/admin/export\", ...)",
+        "src/main.cpp:71 extracts token from query parameter",
+        "src/main.cpp:73 calls files.exportSnapshot(token) which checks against hardcoded \"letmein-export\""
+      ],
+      "confidence": "high"
+    }
+  ],
+  "attack_surfaces": [
+    "TCP socket on INADDR_ANY (0.0.0.0): any remote client can connect without authentication",
+    "Command injection via /debug/ping: user-controlled host parameter passed directly to popen() shell command",
+    "Path traversal via /files: user-controlled name parameter concatenated with base directory without sanitization",
+    "Hardcoded credentials in source: alice/wonderland, operator/op-password, admin/admin123",
+    "Hardcoded admin token: letmein-export in file_cache.cpp:22",
+    "Weak password hashing: non-cryptographic djb2 hash used for password storage",
+    "Predictable session tokens: sess-{username}-{unix_timestamp} format",
+    "Credentials in URL query string: passwords transmitted in URL, logged to audit file",
+    "No TLS/HTTPS: all traffic including credentials transmitted in plaintext",
+    "Fixed 4096-byte recv buffer: no handling of requests exceeding buffer size",
+    "No rate limiting: brute force attacks on /login endpoint unrestricted"
+  ]
+}

@@ -1,0 +1,16 @@
+# Local secrets and task files
+.env
+.env.local
+.env*.local
+jobs/*.env
+!jobs/*.env.example
+
+# Build/runtime scratch
+build/
+*.audit.log
+*.log
+
+# Harness dependency caches
+opencode-config/**/node_modules/
+opencode-config/**/package-lock.json
+opencode-config/**/bun.lock

@@ -1,0 +1,19 @@
+{
+  "started_at": "2026-06-18T06:06:46Z",
+  "finished_at": "2026-06-18T07:03:39Z",
+  "run_status": "completed",
+  "exit_code": 0,
+  "project_dir": "/scan/project",
+  "config_dir": "/scan/opencode",
+  "runtime_config_dir": "/home/scanner/opencode-config-runtime",
+  "output_root_dir": "/scan/output",
+  "runtime_output_dir": "/scan/output/runtime",
+  "harness_output_dir": "/scan/output/harness",
+  "agent": "orchestrator",
+  "model": "alibaba-cn/qwen3.7-max",
+  "prompt_source": "entrypoint.sh",
+  "opencode_session_url": "http://127.0.0.1:4096/L3NjYW4vcHJvamVjdA/session/ses_126a91b23ffe2wX6qXXvQdMFyE",
+  "keep_server_after_run": "1",
+  "opencode_run_timeout_seconds": "0",
+  "opencode_version": "1.17.7 "
+}

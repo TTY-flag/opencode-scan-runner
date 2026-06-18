@@ -1,0 +1,25 @@
+Resolve the scan depth profile for the vulnerability scanning harness.
+
+This tool prevents agents from guessing where scan-profiles.json lives. The orchestrator should call it once during initialization, before invoking scanner coordinators.
+
+Resolution order:
+1. {project_root}/.opencode/scan-profiles.json
+2. {harness_root}/scan-profiles.json, if harness_root is provided
+3. {harness_root}/.opencode/scan-profiles.json, if harness_root is provided
+4. The scan-profiles.json next to this harness tool package
+5. Built-in default profile definitions
+
+Required:
+- project_root: Absolute path to the target project
+- context_dir: Absolute path to {SCAN_OUTPUT}/.context
+
+Optional:
+- scan_profile: Requested profile name: quick, standard, deep, paranoid
+- harness_root: Absolute path to either the .opencode directory or the repository root that contains .opencode
+- output_path: Absolute path for normalized output. Defaults to {context_dir}/scan_profile.json
+
+Output:
+- Writes normalized JSON to {context_dir}/scan_profile.json
+- Returns profile name, max_rounds, repeat pass settings, source path, output path, and any warnings
+
+The normalized JSON should be passed to scanner coordinators instead of asking them to find scan-profiles.json.

@@ -1,0 +1,37 @@
+{
+  "id": "c_cpp",
+  "display_name": "C/C++",
+  "extensions": [".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"],
+  "build_files": ["Makefile", "CMakeLists.txt", "configure.ac", "meson.build", "BUILD", "SConstruct"],
+  "ignore_dirs": ["build", "cmake-build-debug", "cmake-build-release", "third_party", "vendor"],
+  "entry_point_patterns": [
+    "main\\s*\\(",
+    "\\b(listen|accept|recv|recvfrom|read)\\s*\\(",
+    "\\b(ioctl|fuse_main|MODULE_LICENSE)\\b",
+    "\\b(getopt|getopt_long)\\s*\\("
+  ],
+  "frameworks": [
+    {
+      "name": "posix_network_service",
+      "markers": ["listen(", "accept(", "recv("]
+    },
+    {
+      "name": "python_extension",
+      "markers": ["PyMethodDef", "PyModuleDef", "PyInit_"]
+    }
+  ],
+  "source_kinds": ["network", "file", "env", "cmdline", "stdin", "ipc", "callback"],
+  "sink_kinds": [
+    "memory_copy",
+    "format_string",
+    "command_execution",
+    "path_operation",
+    "sql_execution",
+    "dynamic_loading",
+    "integer_size"
+  ],
+  "sanitizer_kinds": ["bounds_check", "length_check", "canonical_path_check", "allowlist", "escape", "safe_wrapper"],
+  "taint_skill": "c-cpp-taint-tracking",
+  "scanner": "dataflow-module-scanner",
+  "security_scanner": "security-module-scanner"
+}
