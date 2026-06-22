@@ -122,14 +122,7 @@ watch_session() {
   done
 }
 
-PROMPT_TEMPLATE='请扫描以下项目，并严格使用给定的容器内绝对路径：
-
-- PROJECT_ROOT: {{PROJECT_DIR}}
-- OUTPUT_DIR: {{HARNESS_OUTPUT_DIR}}
-
-路径约束：
-1. 项目源码目录 PROJECT_ROOT 是只读目录。
-2. AI harness 的所有业务输出只能写入 OUTPUT_DIR 或其子目录。'
+PROMPT_TEMPLATE='/understand /scan/project --language zh --full'
 
 if [ ! -d "$PROJECT_DIR" ]; then
   echo "Project directory does not exist: $PROJECT_DIR" >&2

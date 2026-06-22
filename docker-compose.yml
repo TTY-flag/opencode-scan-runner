@@ -13,10 +13,10 @@ services:
       - type: bind
         source: ${SCAN_PROJECT_DIR:?SCAN_PROJECT_DIR is required}
         target: /scan/project
-        read_only: true
+        read_only: false
       - type: bind
         source: ${HARNESS_CONFIG_DIR:?HARNESS_CONFIG_DIR is required}
-        target: /scan/opencode
+        target: /home/scanner/.agents/skills
         read_only: true
       - type: bind
         source: ${SCAN_OUTPUT_DIR:?SCAN_OUTPUT_DIR is required}

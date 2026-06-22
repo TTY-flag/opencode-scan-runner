@@ -1,6 +1,6 @@
 FROM ghcr.io/anomalyco/opencode:latest
 
-WORKDIR /runner
+WORKDIR /scan/project
 
 COPY runner/ /runner/
 
@@ -14,5 +14,7 @@ RUN apk add --no-cache python3 util-linux \
 USER scanner
 
 ENV HOME=/home/scanner
+
+
 
 ENTRYPOINT ["/runner/entrypoint.sh"]
