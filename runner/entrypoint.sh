@@ -7,7 +7,10 @@ CONFIG_INPUT_DIR="/scan/opencode"
 OUTPUT_DIR="/scan/output"
 HARNESS_OUTPUT_DIR="$OUTPUT_DIR/harness"
 RUNTIME_OUTPUT_DIR="$OUTPUT_DIR/runtime"
+RUN_INFO_PATH="$RUNTIME_OUTPUT_DIR/run-info.json"
+OBSERVE_INFO_PATH="$RUNTIME_OUTPUT_DIR/observe.json"
 RUNTIME_CONFIG_DIR="$HOME/opencode-config-runtime"
+OPENCODE_NODE_MODULES_DIR="$HOME/.config/opencode/node_modules"
 
 AGENT="orchestrator"
 OPENCODE_SERVER_PORT="4096"
@@ -16,14 +19,19 @@ OPENCODE_PUBLIC_PORT="${OPENCODE_HOST_PORT:-$OPENCODE_SERVER_PORT}"
 SERVER_ATTACH_URL="http://127.0.0.1:$OPENCODE_SERVER_PORT"
 OPENCODE_PUBLIC_URL="http://$OPENCODE_PUBLIC_HOST:$OPENCODE_PUBLIC_PORT"
 
-PROMPT_TEMPLATE='请扫描以下项目，并严格使用给定的容器内绝对路径：
+build_prompt() {
+  PROMPT="$(cat <<EOF_PROMPT
+请扫描以下项目，并严格使用给定的容器内绝对路径：
 
-- PROJECT_ROOT: {{PROJECT_DIR}}
-- OUTPUT_DIR: {{HARNESS_OUTPUT_DIR}}
+- PROJECT_ROOT: $PROJECT_DIR
+- OUTPUT_DIR: $HARNESS_OUTPUT_DIR
 
 路径约束：
 1. 项目源码目录 PROJECT_ROOT 是只读目录。
-2. AI harness 的所有业务输出只能写入 OUTPUT_DIR 或其子目录。'
+2. AI harness 的所有业务输出只能写入 OUTPUT_DIR 或其子目录。
+EOF_PROMPT
+)"
+}
 
 die() {
   echo "$1" >&2
@@ -34,12 +42,12 @@ url_base64() {
   printf '%s' "$1" | base64 | tr '+/' '-_' | tr -d '=\n'
 }
 
-make_session_url() {
-  printf 'http://%s:%s/%s/session/%s' \
-    "$OPENCODE_PUBLIC_HOST" \
-    "$OPENCODE_PUBLIC_PORT" \
-    "$(url_base64 "$PROJECT_DIR")" \
-    "$1"
+opencode_project_url() {
+  printf '%s/%s' "$OPENCODE_PUBLIC_URL" "$(url_base64 "$PROJECT_DIR")"
+}
+
+opencode_session_url() {
+  printf '%s/session/%s' "$(opencode_project_url)" "$1"
 }
 
 require_runtime_env() {
@@ -48,6 +56,16 @@ require_runtime_env() {
   fi
 
   MODEL="$OPENCODE_MODEL"
+  case "$MODEL" in
+    */*)
+      PROVIDER="${MODEL%%/*}"
+      ;;
+    *)
+      die "OPENCODE_MODEL must use provider/model format, for example: alibaba-cn/qwen3.7-max" 2
+      ;;
+  esac
+
+  [ -n "$PROVIDER" ] || die "OPENCODE_MODEL provider is empty: $MODEL" 2
 }
 
 validate_mounts() {
@@ -55,33 +73,25 @@ validate_mounts() {
   [ -d "$CONFIG_INPUT_DIR" ] || die "OpenCode config directory does not exist: $CONFIG_INPUT_DIR" 2
 }
 
-prepare_output_root() {
-  mkdir -p "$OUTPUT_DIR"
-}
-
-normalize_paths() {
-  PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
-  CONFIG_INPUT_DIR="$(cd "$CONFIG_INPUT_DIR" && pwd)"
-  OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd)"
-
-  HARNESS_OUTPUT_DIR="$OUTPUT_DIR/harness"
-  RUNTIME_OUTPUT_DIR="$OUTPUT_DIR/runtime"
-  RUN_INFO_PATH="$RUNTIME_OUTPUT_DIR/run-info.json"
-  SESSION_INFO_PATH="$RUNTIME_OUTPUT_DIR/session.json"
-}
-
 prepare_output_dirs() {
   if ! mkdir -p "$HARNESS_OUTPUT_DIR" "$RUNTIME_OUTPUT_DIR"; then
-    die "Harness output directory is not writable: $HARNESS_OUTPUT_DIR" 2
+    die "Output directory is not writable: $OUTPUT_DIR" 2
   fi
 }
 
-prepare_runtime_config() {
+configure_opencode() {
   rm -rf "$RUNTIME_CONFIG_DIR"
   mkdir -p "$RUNTIME_CONFIG_DIR"
   cp -R "$CONFIG_INPUT_DIR"/. "$RUNTIME_CONFIG_DIR"/
 
+  # Custom tools are resolved relative to the runtime config directory.
+  # Reuse OpenCode's bundled dependencies instead of installing packages here.
+  if [ -d "$OPENCODE_NODE_MODULES_DIR" ] && [ ! -e "$RUNTIME_CONFIG_DIR/node_modules" ]; then
+    ln -s "$OPENCODE_NODE_MODULES_DIR" "$RUNTIME_CONFIG_DIR/node_modules"
+  fi
+
   export OPENCODE_CONFIG_DIR="$RUNTIME_CONFIG_DIR"
+
   if [ -f "$RUNTIME_CONFIG_DIR/opencode.jsonc" ]; then
     export OPENCODE_CONFIG="$RUNTIME_CONFIG_DIR/opencode.jsonc"
   elif [ -f "$RUNTIME_CONFIG_DIR/opencode.json" ]; then
@@ -98,7 +108,7 @@ write_opencode_auth() {
   mkdir -p "$AUTH_DIR"
   cat > "$AUTH_DIR/auth.json" <<EOF_AUTH
 {
-  "alibaba-cn": {
+  "$PROVIDER": {
     "type": "api",
     "key": "$DASHSCOPE_API_KEY"
   }
@@ -107,15 +117,8 @@ EOF_AUTH
   chmod 600 "$AUTH_DIR/auth.json"
 }
 
-build_prompt() {
-  PROMPT="$PROMPT_TEMPLATE"
-  PROMPT="$(printf '%s' "$PROMPT" | sed "s|{{PROJECT_DIR}}|$PROJECT_DIR|g")"
-  PROMPT="$(printf '%s' "$PROMPT" | sed "s|{{HARNESS_OUTPUT_DIR}}|$HARNESS_OUTPUT_DIR|g")"
-}
-
 init_run_state() {
   STARTED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-  OPENCODE_VERSION="$(opencode --version 2>/dev/null | tr '\n' ' ' || true)"
   SESSION_ID=""
   SESSION_URL=""
   STATUS=1
@@ -130,6 +133,7 @@ print_start_summary() {
   echo "Runtime output: $RUNTIME_OUTPUT_DIR"
   echo "Agent:          $AGENT"
   echo "Model:          $MODEL"
+  echo "Provider:       $PROVIDER"
 }
 
 start_opencode_server() {
@@ -144,9 +148,32 @@ start_opencode_server() {
 
   echo "OpenCode internal attach URL: $SERVER_ATTACH_URL"
   echo "OpenCode public URL:          $OPENCODE_PUBLIC_URL"
+  echo "OpenCode project URL:         $(opencode_project_url)"
 }
 
-list_agent_session_ids() {
+write_observe_info() {
+  if [ -n "$SESSION_ID" ]; then
+    SESSION_ID_JSON="\"$SESSION_ID\""
+    SESSION_URL_JSON="\"$SESSION_URL\""
+  else
+    SESSION_ID_JSON="null"
+    SESSION_URL_JSON="null"
+  fi
+
+  cat > "$OBSERVE_INFO_PATH" <<EOF_OBSERVE
+{
+  "created_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "project_dir": "$PROJECT_DIR",
+  "project_route": "$(url_base64 "$PROJECT_DIR")",
+  "opencode_server_url": "$OPENCODE_PUBLIC_URL",
+  "opencode_project_url": "$(opencode_project_url)",
+  "opencode_session_id": $SESSION_ID_JSON,
+  "opencode_session_url": $SESSION_URL_JSON
+}
+EOF_OBSERVE
+}
+
+find_orchestrator_session_id() {
   SESSION_LIST_JSON="$(wget -qO- "$SERVER_ATTACH_URL/session?directory=$PROJECT_DIR" 2>/dev/null || true)"
   printf '%s' "$SESSION_LIST_JSON" \
     | tr -d '\n' \
@@ -155,86 +182,22 @@ list_agent_session_ids() {
     | grep "\"$AGENT\"" \
     | grep -v '"parentID"' \
     | grep -o 'ses_[A-Za-z0-9]*' \
-    | awk '!seen[$0]++' || true
+    | head -n 1 || true
 }
 
-capture_existing_sessions() {
-  EXISTING_SESSION_IDS="$(list_agent_session_ids | tr '\n' ' ')"
-}
-
-find_new_session_id() {
-  for CANDIDATE_SESSION_ID in $(list_agent_session_ids); do
-    case " $EXISTING_SESSION_IDS " in
-      *" $CANDIDATE_SESSION_ID "*) ;;
-      *)
-        printf '%s' "$CANDIDATE_SESSION_ID"
-        return 0
-        ;;
-    esac
-  done
-}
-
-write_session_info() {
-  cat > "$SESSION_INFO_PATH" <<EOF_SESSION
-{
-  "discovered_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "project_dir": "$PROJECT_DIR",
-  "project_route": "$(url_base64 "$PROJECT_DIR")",
-  "opencode_server_url": "$OPENCODE_PUBLIC_URL",
-  "opencode_session_id": "$SESSION_ID",
-  "opencode_session_url": "$SESSION_URL"
-}
-EOF_SESSION
-}
-
-write_run_info() {
-  RUN_STATUS="$1"
-  FINISHED_VALUE="${2:-}"
-  EXIT_CODE_VALUE="${3:-}"
-
-  if [ -n "$FINISHED_VALUE" ]; then
-    FINISHED_JSON="\"$FINISHED_VALUE\""
-  else
-    FINISHED_JSON="null"
+discover_session_url() {
+  SESSION_ID="$(find_orchestrator_session_id)"
+  if [ -n "$SESSION_ID" ]; then
+    SESSION_URL="$(opencode_session_url "$SESSION_ID")"
+    write_observe_info
+    echo "OpenCode session URL:       $SESSION_URL"
   fi
-
-  if [ -n "$EXIT_CODE_VALUE" ]; then
-    EXIT_CODE_JSON="$EXIT_CODE_VALUE"
-  else
-    EXIT_CODE_JSON="null"
-  fi
-
-  cat > "$RUN_INFO_PATH" <<EOF_INFO
-{
-  "started_at": "$STARTED_AT",
-  "finished_at": $FINISHED_JSON,
-  "run_status": "$RUN_STATUS",
-  "exit_code": $EXIT_CODE_JSON,
-  "project_dir": "$PROJECT_DIR",
-  "config_dir": "$CONFIG_INPUT_DIR",
-  "runtime_config_dir": "$RUNTIME_CONFIG_DIR",
-  "output_root_dir": "$OUTPUT_DIR",
-  "runtime_output_dir": "$RUNTIME_OUTPUT_DIR",
-  "harness_output_dir": "$HARNESS_OUTPUT_DIR",
-  "agent": "$AGENT",
-  "model": "$MODEL",
-  "prompt_source": "entrypoint.sh",
-  "opencode_session_url": "$SESSION_URL",
-  "keep_server_after_run": "1",
-  "opencode_run_timeout_seconds": "0",
-  "opencode_version": "$OPENCODE_VERSION"
-}
-EOF_INFO
 }
 
-watch_session() {
+watch_session_url() {
   while :; do
-    SESSION_ID="$(find_new_session_id)"
-    if [ -n "$SESSION_ID" ]; then
-      SESSION_URL="$(make_session_url "$SESSION_ID")"
-      write_session_info
-      write_run_info "running" "" ""
-      echo "Session URL:                $SESSION_URL"
+    discover_session_url
+    if [ -n "$SESSION_URL" ]; then
       return 0
     fi
     sleep 1
@@ -242,7 +205,7 @@ watch_session() {
 }
 
 start_session_watcher() {
-  watch_session &
+  watch_session_url &
   SESSION_WATCHER_PID=$!
 }
 
@@ -266,56 +229,46 @@ run_opencode_scan() {
   set -e
 }
 
-discover_session_after_run() {
-  if [ -n "$SESSION_ID" ]; then
-    return 0
-  fi
-
-  SESSION_ID="$(find_new_session_id)"
-  if [ -n "$SESSION_ID" ]; then
-    SESSION_URL="$(make_session_url "$SESSION_ID")"
-    write_session_info
-  fi
-}
-
-evaluate_harness_result() {
-  HARNESS_SCAN_LOG="$HARNESS_OUTPUT_DIR/.context/scan_log.json"
-
-  if [ "$STATUS" -eq 0 ] && [ -f "$HARNESS_SCAN_LOG" ]; then
-    if grep -q '"status"[[:space:]]*:[[:space:]]*"failed"' "$HARNESS_SCAN_LOG"; then
-      STATUS=1
-    fi
-  fi
-
-  if [ "$STATUS" -eq 0 ]; then
-    if [ ! -s "$HARNESS_OUTPUT_DIR/.context/scan.db" ] \
-      || [ ! -s "$HARNESS_SCAN_LOG" ] \
-      || { [ ! -s "$HARNESS_OUTPUT_DIR/report_confirmed.md" ] && [ ! -s "$HARNESS_OUTPUT_DIR/report_unconfirmed.md" ]; }; then
-      STATUS=1
-    fi
-  fi
-}
-
-write_final_run_info() {
+write_run_info() {
   FINISHED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
   if [ "$STATUS" -eq 0 ]; then
-    write_run_info "completed" "$FINISHED_AT" "$STATUS"
+    RUN_STATUS="completed"
   else
-    write_run_info "failed" "$FINISHED_AT" "$STATUS"
+    RUN_STATUS="failed"
   fi
+
+  if [ -n "$SESSION_URL" ]; then
+    SESSION_URL_JSON="\"$SESSION_URL\""
+  else
+    SESSION_URL_JSON="null"
+  fi
+
+  cat > "$RUN_INFO_PATH" <<EOF_INFO
+{
+  "started_at": "$STARTED_AT",
+  "finished_at": "$FINISHED_AT",
+  "run_status": "$RUN_STATUS",
+  "exit_code": $STATUS,
+  "project_dir": "$PROJECT_DIR",
+  "config_dir": "$CONFIG_INPUT_DIR",
+  "runtime_output_dir": "$RUNTIME_OUTPUT_DIR",
+  "harness_output_dir": "$HARNESS_OUTPUT_DIR",
+  "agent": "$AGENT",
+  "model": "$MODEL",
+  "opencode_project_url": "$(opencode_project_url)",
+  "opencode_session_url": $SESSION_URL_JSON
+}
+EOF_INFO
 }
 
 print_finish_summary() {
   echo "Harness output:             $HARNESS_OUTPUT_DIR"
   echo "Run info:                   $RUN_INFO_PATH"
-
-  if [ -f "$SESSION_INFO_PATH" ]; then
-    echo "Session info:               $SESSION_INFO_PATH"
-  fi
-
+  echo "Observe info:               $OBSERVE_INFO_PATH"
+  echo "OpenCode project URL:       $(opencode_project_url)"
   if [ -n "$SESSION_URL" ]; then
-    echo "Session URL:                $SESSION_URL"
+    echo "OpenCode session URL:       $SESSION_URL"
   fi
 }
 
@@ -327,30 +280,58 @@ keep_server_alive() {
 }
 
 main() {
+  # 1. 校验外部传入的必填运行参数，例如模型名称。
   require_runtime_env
+
+  # 2. 校验 Docker 挂载是否就绪：待扫描项目和 harness 配置目录必须存在。
   validate_mounts
-  prepare_output_root
-  normalize_paths
+
+  # 3. 创建 harness 输出目录和 runner 运行状态目录。
   prepare_output_dirs
-  prepare_runtime_config
+
+  # 4. 准备可写的 OpenCode 运行时配置目录，并挂接 custom tools 依赖。
+  configure_opencode
+
+  # 5. 如果传入了 API key，则写入 OpenCode auth 文件。
   write_opencode_auth
+
+  # 6. 根据项目路径和输出路径生成本次扫描提示词。
   build_prompt
+
+  # 7. 初始化运行状态变量，例如开始时间和默认退出码。
   init_run_state
 
+  # 8. 打印启动摘要，方便从容器日志中确认本次任务配置。
   print_start_summary
+
+  # 9. 启动 OpenCode server，用于 attach 扫描会话和实时观察 UI。
   start_opencode_server
-  capture_existing_sessions
-  write_run_info "server_ready" "" ""
 
+  # 10. 立即写出外部可访问的 OpenCode 项目 URL，供平台实时读取。
+  write_observe_info
+
+  # 11. 后台等待 orchestrator 会话出现，并尽早写出 session URL。
   start_session_watcher
-  run_opencode_scan
-  stop_session_watcher
-  discover_session_after_run
-  evaluate_harness_result
-  write_final_run_info
 
+  # 12. 执行核心扫描命令：opencode run。
+  run_opencode_scan
+
+  # 13. 扫描结束后停止 session URL 监听器。
+  stop_session_watcher
+
+  # 14. 兜底获取 session URL，避免 watcher 没来得及写出。
+  discover_session_url
+
+  # 15. 写入最终运行状态；runner 不再判断具体 harness 产物结构。
+  write_run_info
+
+  # 16. 打印输出路径、OpenCode 项目 URL 和 session URL。
   print_finish_summary
+
+  # 17. 保持 OpenCode server 存活，便于扫描结束后继续查看 UI。
   keep_server_alive
+
+  # 18. Runner 自身正常退出；扫描成败以 run-info.json 为准。
   exit 0
 }
 

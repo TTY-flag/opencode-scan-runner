@@ -1,0 +1,14 @@
+{
+  "started_at": "2026-06-23T12:36:16Z",
+  "finished_at": "2026-06-23T12:38:30Z",
+  "run_status": "completed",
+  "exit_code": 0,
+  "project_dir": "/scan/project",
+  "config_dir": "/scan/opencode",
+  "runtime_output_dir": "/scan/output/runtime",
+  "harness_output_dir": "/scan/output/harness",
+  "agent": "orchestrator",
+  "model": "alibaba-cn/glm-5",
+  "opencode_project_url": "http://127.0.0.1:4096/L3NjYW4vcHJvamVjdA",
+  "opencode_session_url": "http://127.0.0.1:4096/L3NjYW4vcHJvamVjdA/session/ses_10b84b877ffe4DGBO4L5N4mPWg"
+}

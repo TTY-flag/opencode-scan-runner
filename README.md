@@ -112,6 +112,8 @@ docker compose --env-file jobs/job-multi_langage.env --project-name scan-multi u
    - 如果 harness 工具需要访问挂载目录外的路径，确认权限配置符合预期。
    - 如果 harness 有自定义 tools，确认 `package.json`、`tools/` 等文件一起放进来了。
 
+   Runner 会把 `HARNESS_CONFIG_DIR` 只读挂载到容器内 `/scan/opencode`，启动时再复制到容器内部可写的 OpenCode runtime config 目录。这样宿主机 harness 保持只读，同时 custom tools 可以从 runtime config 旁边解析 OpenCode 内置依赖。
+
 4. 新增任务 env。
 
    本地真实任务文件会被 Git 忽略，可以从 example 复制：
@@ -173,10 +175,10 @@ OPENCODE_HOST_PORT=4096
 
 字段说明：
 
-- `DASHSCOPE_API_KEY`：Alibaba DashScope API key。
-- `OPENCODE_MODEL`：OpenCode 使用的模型，例如 `alibaba-cn/qwen3.7-max`。
+- `DASHSCOPE_API_KEY`：Alibaba DashScope API key。Runner 会把它写入 `OPENCODE_MODEL` 前缀对应的 OpenCode provider auth。
+- `OPENCODE_MODEL`：OpenCode 使用的模型，必须使用 `provider/model` 格式，例如 `alibaba-cn/qwen3.7-max`。其中 `alibaba-cn` 会作为 provider id。
 - `SCAN_PROJECT_DIR`：宿主机上的待扫描项目目录，容器内只读挂载到 `/scan/project`。
-- `HARNESS_CONFIG_DIR`：OpenCode harness 目录，目录下应直接包含 `opencode.jsonc`、`agents/`、`skills/`、`tools/`。
+- `HARNESS_CONFIG_DIR`：OpenCode harness 目录，目录下应直接包含 `opencode.jsonc`、`agents/`、`skills/`、`tools/`。该目录会只读挂载进容器，Runner 会在容器内部复制一份作为 OpenCode 实际运行配置。
 - `SCAN_OUTPUT_DIR`：扫描结果输出目录，容器内挂载到 `/scan/output`。
 - `OPENCODE_HOST_PORT`：宿主机访问 OpenCode UI 的端口。
 
@@ -186,10 +188,10 @@ OPENCODE_HOST_PORT=4096
 
 ```text
 output/<job>/runtime/run-info.json
-output/<job>/runtime/session.json
+output/<job>/runtime/observe.json
 ```
 
-`runtime/` 是 Runner 固定输出，所有 harness 都会有。
+`runtime/` 是 Runner 固定输出，所有 harness 都会有。其中 `observe.json` 会在 OpenCode server 启动后尽早生成，并在会话创建后更新 `opencode_session_url`，方便平台或用户实时获取观察 URL。
 
 Harness 产物：
 
@@ -204,10 +206,10 @@ output/<job>/harness/
 实时观察会话：
 
 ```bash
-cat output/<job>/runtime/session.json
+cat output/<job>/runtime/observe.json
 ```
 
-打开其中的 `opencode_session_url`，或访问：
+优先打开其中的 `opencode_session_url`。如果会话还没创建完成，可以先打开 `opencode_project_url`，或访问：
 
 ```text
 http://127.0.0.1:<OPENCODE_HOST_PORT>
