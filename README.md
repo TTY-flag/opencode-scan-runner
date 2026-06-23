@@ -2,7 +2,7 @@
 
 基于 Docker Compose 的 OpenCode 代码安全扫描 Runner。用户配置一个任务 env 文件，指定待扫描项目、harness、模型密钥和输出目录，然后启动容器即可扫描。
 
-运行环境：Linux 机器，已安装 Docker Engine 和 Docker Compose plugin。
+运行环境：Linux 机器，已安装 Docker Engine 和 Docker Compose plugin。当前 Runner 基础镜像使用 Ubuntu 系的 `smanx/opencode:latest`。
 
 ## 目录
 
