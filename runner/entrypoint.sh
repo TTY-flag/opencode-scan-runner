@@ -8,7 +8,6 @@ OUTPUT_DIR="/scan/output"
 HARNESS_OUTPUT_DIR="$OUTPUT_DIR/harness"
 RUNTIME_OUTPUT_DIR="$OUTPUT_DIR/runtime"
 RUN_INFO_PATH="$RUNTIME_OUTPUT_DIR/run-info.json"
-OBSERVE_INFO_PATH="$RUNTIME_OUTPUT_DIR/observe.json"
 RUNTIME_CONFIG_DIR="$HOME/opencode-config-runtime"
 OPENCODE_NODE_MODULES_DIR="$HOME/.config/opencode/node_modules"
 
@@ -151,7 +150,9 @@ start_opencode_server() {
   echo "OpenCode project URL:         $(opencode_project_url)"
 }
 
-write_observe_info() {
+write_run_info() {
+  RUN_STATUS="$1"
+
   if [ -n "$SESSION_ID" ]; then
     SESSION_ID_JSON="\"$SESSION_ID\""
     SESSION_URL_JSON="\"$SESSION_URL\""
@@ -160,17 +161,34 @@ write_observe_info() {
     SESSION_URL_JSON="null"
   fi
 
-  cat > "$OBSERVE_INFO_PATH" <<EOF_OBSERVE
+  if [ "$RUN_STATUS" = "completed" ] || [ "$RUN_STATUS" = "failed" ]; then
+    FINISHED_AT_JSON="\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\""
+    EXIT_CODE_JSON="$STATUS"
+  else
+    FINISHED_AT_JSON="null"
+    EXIT_CODE_JSON="null"
+  fi
+
+  cat > "$RUN_INFO_PATH" <<EOF_INFO
 {
-  "created_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "started_at": "$STARTED_AT",
+  "updated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "finished_at": $FINISHED_AT_JSON,
+  "run_status": "$RUN_STATUS",
+  "exit_code": $EXIT_CODE_JSON,
   "project_dir": "$PROJECT_DIR",
+  "config_dir": "$CONFIG_INPUT_DIR",
+  "runtime_output_dir": "$RUNTIME_OUTPUT_DIR",
+  "harness_output_dir": "$HARNESS_OUTPUT_DIR",
+  "agent": "$AGENT",
+  "model": "$MODEL",
   "project_route": "$(url_base64 "$PROJECT_DIR")",
   "opencode_server_url": "$OPENCODE_PUBLIC_URL",
   "opencode_project_url": "$(opencode_project_url)",
   "opencode_session_id": $SESSION_ID_JSON,
   "opencode_session_url": $SESSION_URL_JSON
 }
-EOF_OBSERVE
+EOF_INFO
 }
 
 find_orchestrator_session_id() {
@@ -189,7 +207,7 @@ discover_session_url() {
   SESSION_ID="$(find_orchestrator_session_id)"
   if [ -n "$SESSION_ID" ]; then
     SESSION_URL="$(opencode_session_url "$SESSION_ID")"
-    write_observe_info
+    write_run_info "running"
     echo "OpenCode session URL:       $SESSION_URL"
   fi
 }
@@ -217,6 +235,8 @@ stop_session_watcher() {
 }
 
 run_opencode_scan() {
+  write_run_info "running"
+
   set +e
   opencode run \
     --dir "$PROJECT_DIR" \
@@ -229,43 +249,17 @@ run_opencode_scan() {
   set -e
 }
 
-write_run_info() {
-  FINISHED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
+write_final_run_info() {
   if [ "$STATUS" -eq 0 ]; then
-    RUN_STATUS="completed"
+    write_run_info "completed"
   else
-    RUN_STATUS="failed"
+    write_run_info "failed"
   fi
-
-  if [ -n "$SESSION_URL" ]; then
-    SESSION_URL_JSON="\"$SESSION_URL\""
-  else
-    SESSION_URL_JSON="null"
-  fi
-
-  cat > "$RUN_INFO_PATH" <<EOF_INFO
-{
-  "started_at": "$STARTED_AT",
-  "finished_at": "$FINISHED_AT",
-  "run_status": "$RUN_STATUS",
-  "exit_code": $STATUS,
-  "project_dir": "$PROJECT_DIR",
-  "config_dir": "$CONFIG_INPUT_DIR",
-  "runtime_output_dir": "$RUNTIME_OUTPUT_DIR",
-  "harness_output_dir": "$HARNESS_OUTPUT_DIR",
-  "agent": "$AGENT",
-  "model": "$MODEL",
-  "opencode_project_url": "$(opencode_project_url)",
-  "opencode_session_url": $SESSION_URL_JSON
-}
-EOF_INFO
 }
 
 print_finish_summary() {
   echo "Harness output:             $HARNESS_OUTPUT_DIR"
   echo "Run info:                   $RUN_INFO_PATH"
-  echo "Observe info:               $OBSERVE_INFO_PATH"
   echo "OpenCode project URL:       $(opencode_project_url)"
   if [ -n "$SESSION_URL" ]; then
     echo "OpenCode session URL:       $SESSION_URL"
@@ -307,8 +301,8 @@ main() {
   # 9. 启动 OpenCode server，用于 attach 扫描会话和实时观察 UI。
   start_opencode_server
 
-  # 10. 立即写出外部可访问的 OpenCode 项目 URL，供平台实时读取。
-  write_observe_info
+  # 10. 立即写出 run-info.json，供平台读取当前状态和 OpenCode 项目 URL。
+  write_run_info "server_ready"
 
   # 11. 后台等待 orchestrator 会话出现，并尽早写出 session URL。
   start_session_watcher
@@ -323,7 +317,7 @@ main() {
   discover_session_url
 
   # 15. 写入最终运行状态；runner 不再判断具体 harness 产物结构。
-  write_run_info
+  write_final_run_info
 
   # 16. 打印输出路径、OpenCode 项目 URL 和 session URL。
   print_finish_summary

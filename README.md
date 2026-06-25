@@ -188,10 +188,16 @@ OPENCODE_HOST_PORT=4096
 
 ```text
 output/<job>/runtime/run-info.json
-output/<job>/runtime/observe.json
 ```
 
-`runtime/` 是 Runner 固定输出，所有 harness 都会有。其中 `observe.json` 会在 OpenCode server 启动后尽早生成，并在会话创建后更新 `opencode_session_url`，方便平台或用户实时获取观察 URL。
+`runtime/` 是 Runner 固定输出，目前只保留 `run-info.json`。该文件会在 OpenCode server 启动后尽早生成，并在运行过程中不断补全当前状态、OpenCode 项目 URL 和会话 URL。
+
+常见 `run_status`：
+
+- `server_ready`：OpenCode server 已启动，`opencode_project_url` 可用于打开项目页面。
+- `running`：`opencode run` 正在执行；发现会话后会补全 `opencode_session_id` 和 `opencode_session_url`。
+- `completed`：扫描命令正常结束，`exit_code` 为 `0`。
+- `failed`：扫描命令异常结束，`exit_code` 为非 `0`。
 
 Harness 产物：
 
@@ -206,7 +212,7 @@ output/<job>/harness/
 实时观察会话：
 
 ```bash
-cat output/<job>/runtime/observe.json
+cat output/<job>/runtime/run-info.json
 ```
 
 优先打开其中的 `opencode_session_url`。如果会话还没创建完成，可以先打开 `opencode_project_url`，或访问：
